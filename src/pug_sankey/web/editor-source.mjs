@@ -637,7 +637,7 @@ export function renameNodeReferences(value, oldId, newId) {
   if (!oldId || !newId || oldId === newId) return value;
   const escapedId = escapeRegExp(oldId);
   return value.split("\n").map((line) => line.replace(
-    new RegExp(`^(\\s*\\.(?:from|to)\\s+)${escapedId}(\\s*)$`),
+    new RegExp(`^(\\s*\\.(?:from|to|id)\\s+)${escapedId}(\\s*)$`),
     `$1${newId}$2`,
   )).join("\n");
 }

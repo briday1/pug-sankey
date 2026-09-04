@@ -9,9 +9,9 @@ from urllib.request import urlopen
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from pugflow import __version__  # noqa: E402
-from pugflow.cli import build_parser  # noqa: E402
-from pugflow.server import create_server  # noqa: E402
+from pug_sankey import __version__  # noqa: E402
+from pug_sankey.cli import build_parser  # noqa: E402
+from pug_sankey.server import create_server  # noqa: E402
 
 
 class ServerTests(unittest.TestCase):
@@ -35,17 +35,17 @@ class ServerTests(unittest.TestCase):
     def test_serves_the_editor_and_bundled_assets(self):
         status, headers, body = self.get("/")
         self.assertEqual(status, 200)
-        self.assertIn(b"Pugflow", body)
+        self.assertIn(b"Pug Sankey", body)
         self.assertIn(f"Version <span>{__version__}</span>".encode(), body)
-        self.assertIn(b"https://github.com/briday1/pugflow", body)
-        self.assertIn(b"https://pypi.org/project/pugflow/", body)
+        self.assertIn(b"https://github.com/briday1/pug-sankey", body)
+        self.assertIn(b"https://pypi.org/project/pug-sankey/", body)
         self.assertEqual(body.count(b"Open Documentation"), 1)
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
 
         status, headers, bundle = self.get("/app.mjs")
         self.assertEqual(status, 200)
         self.assertEqual(headers.get_content_type(), "text/javascript")
-        self.assertIn(b"Pugflow showcase", bundle)
+        self.assertIn(b"Pug Sankey showcase", bundle)
 
         status, headers, docs = self.get("/docs.html")
         self.assertEqual(status, 200)
@@ -67,9 +67,9 @@ class ServerTests(unittest.TestCase):
     def test_cli_accepts_numbered_demos_and_defaults_to_one(self):
         self.assertIsNone(build_parser().parse_args([]).demo)
         self.assertEqual(build_parser().parse_args(["--demo"]).demo, 1)
-        self.assertEqual(build_parser().parse_args(["--demo", "10"]).demo, 10)
+        self.assertEqual(build_parser().parse_args(["--demo", "8"]).demo, 8)
         with self.assertRaises(SystemExit):
-            build_parser().parse_args(["--demo", "11"])
+            build_parser().parse_args(["--demo", "9"])
 
 
 if __name__ == "__main__":
