@@ -1,0 +1,32 @@
+:root {
+  --diagram-background: #ffffff;
+  --diagram-label: #111111;
+  --diagram-text: #111111;
+  --diagram-merge: #111111;
+  --diagram-annotation: #000000;
+  --diagram-font: Verdana, sans-serif;
+}
+
+.pugflow,
+.pugflow *,
+.pugflow *::before,
+.pugflow *::after {
+  box-sizing: border-box;
+}
+
+.pugflow {
+  position: relative;
+  overflow: auto;
+  color: var(--diagram-text);
+  background: var(--diagram-background);
+  font-family: var(--diagram-font);
+}
+
+.pugflow-svg {
+  display: block;
+  max-width: none;
+}
+
+.pugflow-svg.empty-diagram {
+  display: none;
+}

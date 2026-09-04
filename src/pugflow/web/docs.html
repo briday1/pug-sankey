@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Complete offline Pugflow documentation"><link rel="icon" href="data:,"><link rel="stylesheet" href="docs.css"><title>Pugflow documentation</title></head>
+<body><div class="layout">
+<nav><strong>Pugflow docs</strong><a href="#start">Getting started</a><a href="#structure">Canvas and graphs</a><a href="#nodes">Nodes</a><a href="#flows">Flows</a><a href="#styles">Reusable CSS</a><a href="#text">Text and annotations</a><a href="#images">Images and shadows</a><a href="#hidden">Hiding items</a><a href="#canvas-ui">Canvas editing</a><a href="#editor">Source editor</a><a href="#files">Pug and CSS files</a><a href="#cli">Command line</a><a href="#reference">Property reference</a></nav>
+<main>
+<h1>Pugflow</h1><p class="lede">Complete offline reference for building, styling, editing, and exporting source-first diagrams.</p>
+
+<h2 id="start">Getting started</h2><p>A project needs one Pug file and may have one companion CSS file. Pug describes structure and local overrides; CSS holds reusable node, flow, and annotation types. The smallest diagram is:</p>
+<pre><code>graph
+  node
+    .id start
+    .right-ports distributed
+    .label Start</code></pre>
+<p>Indentation defines ownership. Use two spaces consistently. Blank lines and lines beginning with <code>//</code> are ignored. Save Pug and CSS to keep the project editable; SVG and PNG are export formats.</p>
+
+<h2 id="structure">Canvas and graphs</h2><p>The canvas is always implied, so an empty file is a valid empty canvas. Put canvas defaults, one or more sibling <code>graph</code> blocks, and cross-graph flows directly at the source root. Graphs never nest. Declare every node directly inside its graph and put a flow inside that graph when both endpoints belong to it. Legacy <code>#canvas</code> and <code>#diagram</code> roots still parse, but new source never needs or emits them.</p>
+<pre><code>.background #ffffff
+graph
+  .id main
+  .label Main process
+  .label-position outside
+  .align center
+  .font-size 16
+  .font-weight bold
+  node
+    .id root
+    .label Root
+graph
+  .id separate
+  .layer 1
+  .offset (0, 40)
+  node
+    .label Independent graph</code></pre>
+<p>Graph titles support <code>.label-position inside|outside</code>, horizontal <code>.align left|center|right</code>, vertical <code>.vertical-align top|middle|bottom</code>, <code>.label-offset (x, y)</code>, <code>.color</code>, and all font options. Titles default to top-center inside the graph. Drag a graph title to set its label offset. Use <code>.placement above|below|left|right</code> with <code>.relative-to graph-id</code> to position a graph relative to another graph. Without these fields, each graph is placed below the previous graph. Use <code>.x-spacing</code> and <code>.y-spacing</code> to tune layout within a graph. Frames are automatically packed without overlap by default. Explicit offsets may overlap frames. <strong>Clean Up</strong> removes small accidental flow kinks within and between graphs while preserving deliberate bends; cross-graph corrections move whole graphs rather than altering their internal layouts. Higher layers render in front; equal layers retain source order. The right-side <strong>Objects</strong> panel combines collapsible graph ordering with a graph picker and clickable node/flow lists. A flow renders at the higher layer of its endpoint graphs.</p>
+
+<h2 id="nodes">Nodes</h2><p>A node always starts with bare <code>node</code>; nest a reusable <code>@node</code> class such as <code>.card</code> directly beneath it to apply that type. Flows likewise start with bare <code>flow</code>. Legacy dotted declarations still parse. Keep identity, label, layout, and appearance properties dotted beneath the declaration. Declaration order initially controls stacking within the graph, with later nodes in front. Reordering nodes adds integer <code>.layer</code> overrides to the source.</p>
+<pre><code>node
+  .id service
+  .layer 1
+  .label
+    | Service name
+    | Multiline description
+  .shape rounded
+  .width 220
+  .height auto
+  .fill #ffffff
+  .color #111827
+  .outline #94a3b8
+  .outline-style dashed
+  .outline-width 2
+  .align left
+  .vertical-align middle</code></pre>
+<p>Nodes do not nest. Give connected nodes IDs and declare their relationships as sibling <code>flow</code> blocks in the graph.</p>
+
+<h2 id="flows">Flows</h2><p>Every flow explicitly identifies its source and target node. Branching and merging are inferred when several flows share a source or target.</p>
+<pre><code>graph
+  node
+    .id start
+    .label Start
+  node
+    .id validate
+    .label Validate
+  node
+    .id publish
+    .label Publish
+  flow
+    .from start
+    .to validate
+    .direction right
+  flow
+    .from validate
+    .to publish</code></pre>
+<p>Directions are <code>right</code>, <code>left</code>, <code>up</code>, and <code>down</code>. Every node face has its own port setting: <code>top-ports</code>, <code>right-ports</code>, <code>bottom-ports</code>, and <code>left-ports</code>. Each is <code>shared</code> by default or may be <code>distributed</code>. Multiple outgoing flows are rendered as branches; multiple incoming flows are rendered as a merge. No separate branch, merge, or connection keyword is needed.</p>
+<p>A flow may also connect any two nodes by ID, regardless of their order in the source. This supports convergence, feedback, cross-graph connections, and targets declared later:</p>
+<pre><code>flow
+  .from archived
+  .to active
+  .from-direction up
+  .to-direction left
+  .feedback_flow
+  .label feedback</code></pre>
+<p><code>.from-direction</code> controls the side used to leave the source; <code>.to-direction</code> independently controls the side used to enter the target.</p>
+<p>Flows may contain any number of direct annotations. They appear above the route by default and may be dragged to write an <code>.offset</code>:</p>
+<pre><code>flow
+  .from validate
+  .to publish
+  .annotation
+    | first note
+  .annotation
+    .color #dc2626
+    | second note</code></pre>
+<p>Set <code>.arrow-shape chunky</code> for a filled block arrow. Its <code>.color</code> is the fill, while <code>.outline</code> and <code>.outline-width</code> control the outside border. <code>.arrow-height</code> sets shaft height and <code>.arrow-head-width</code> sets head length.</p>
+
+<h2 id="styles">Reusable CSS</h2><p>Reusable definitions may be written at the source root in Pug or in the optional CSS tab. CSS uses Pugflow at-rules rather than browser selectors:</p>
+<pre><code>@node card {
+  shape: rounded;
+  fill: #ffffff;
+  outline: #94a3b8;
+  shadow-color: #000000;
+}
+
+@flow warning {
+  color: #dc2626;
+  stroke-style: dashed;
+  arrow-style: both;
+}
+
+@annotation note {
+  color: #2563eb;
+  font-style: italic;
+}</code></pre>
+<p>Nest <code>.card</code> inside <code>node</code>, and <code>.warning</code>/<code>.note</code> inside the flow or annotation they decorate. Local fields beneath an item override its reusable type. Names must be unique across all four definition kinds: node, flow, graph, and annotation.</p>
+
+<h2 id="text">Text and annotations</h2><p>Graph titles, nodes, annotations, and connection labels support <code>font-family</code>, <code>font-size</code>, <code>font-weight</code>, <code>font-style</code>, <code>text-decoration</code>, <code>text-outline</code>, and <code>text-outline-width</code>. Text outlines are transparent with zero width by default. Nodes additionally support horizontal <code>.align left|center|right</code> and <code>.vertical-align top|middle|bottom</code>. A node may have any number of annotations above or below it. In the node inspector, use <strong>+ Add Annotation</strong>, choose Above or Below as a convenient starting position, then edit, hide, delete, or drag each annotation to set its own offset.</p>
+<pre><code>node
+  .label Important
+  .font-size 20
+  .font-weight bold
+  .font-style italic
+  .text-decoration underline
+  .annotation
+    .above
+      .font-size 13
+      .color #2563eb
+      | Annotation above
+    .below Annotation below</code></pre>
+<p>Use <code>$...$</code> for inline math and <code>$$...$$</code> for display math. Pugflow bundles MathJax and renders real TeX as self-contained SVG paths in nodes, node annotations, and flow annotations. Equations are measured during layout and work in offline SVG, PNG, and CLI exports.</p>
+
+<h2 id="images">Images and shadows</h2><pre><code>image
+  .id profile
+  .source photos/profile.png
+  .width 96
+  .height 96
+  .fit contain
+  .opacity 1
+  .padding 0
+  .annotation
+    .below Profile
+  .shadow-color #000000
+  .shadow-offset-x 4
+  .shadow-offset-y 5
+  .shadow-blur 8
+  .shadow-opacity 0.3</code></pre>
+<p>Images are standalone graph objects with annotations but no label, and may be flow endpoints. Enter a URL or file location, or browse for a local image in the inspector. Fit accepts <code>contain</code>, <code>cover</code>, or <code>fill</code>. Border padding defaults to zero; border and fill default to transparent, with fill rendered over the image.</p>
+
+<h2 id="hidden">Hiding items</h2><p>Add <code>.hidden</code> to a node, annotation, flow, or graph. Hidden nodes remain in layout so before/after versions retain exact placement; their annotations and every touching flow are also hidden. Hidden graphs, nodes, and flows appear struck through in the Objects panel.</p>
+
+<h2 id="canvas-ui">Canvas editing</h2><ul><li>Click a node, label, annotation, flow, flow label, or graph to select it and jump to its source.</li><li>From a node's properties, use <strong>Add Connected Node</strong> to create a new node above, below, left, or right.</li><li>Graph boundaries fade in when the pointer approaches them, making transparent graphs easy to find and select.</li><li>Ctrl-click (Cmd-click on macOS) toggles multi-selection. Mixed selections show only actions shared by every selected item.</li><li>Drag nodes, text, images, and graphs; hold Cmd on macOS or Ctrl on other platforms to constrain movement to the dominant axis. Shift remains supported as an alternative. Graph offsets may intentionally overlap frames.</li><li>Use <strong>Graph Layer</strong> in the graph inspector or the collapsible <strong>Graphs</strong> list in the Objects panel to control graph stacking.</li><li>Choose a graph in the Objects panel to browse its nodes and flows. Its node list is ordered front to back from declaration order. Dragging nodes, or using <strong>Node Layer</strong> in the node inspector to send selected nodes to the front or back, writes explicit layers to the source. Clicking any node or flow opens its normal property inspector.</li><li>The origin ghost shows the previous position while dragging.</li><li>A selected node lists all incoming and outgoing flows, including flows crossing graph boundaries. Each flow exposes its source and target faces.</li><li>Text fields provide adjacent expandable <strong>Font options</strong> for family, style, size, weight, decoration, and color.</li><li>Use node/flow types first, then local inspector values as overrides.</li><li>Align or distribute multiple selected nodes or graphs from the inspector.</li><li><strong>Clean up</strong> aligns connected flow nodes and collapses unnecessary bends by correcting offsets. It never changes flow faces or moves untouched sibling branches.</li><li>Undo/Redo and Ctrl+Z/Ctrl+Y cover canvas and direct source edits, including edits that temporarily cause a parse error.</li><li>Zoom affects preview only; Fit frames the drawing. Exports use diagram bounds.</li><li><strong>+ New</strong> contains Graph, Node, and Flow creation.</li><li><strong>Copy</strong> writes a 2× high-DPI PNG to the clipboard. <strong>Save</strong> opens format and PNG-resolution options for PNG or SVG export.</li></ul>
+
+<h2 id="editor">Source editor</h2><p>The editor provides line numbers, current-line highlighting, syntax color, color pickers beside hex values, and context-aware completions with Ctrl+Space or Tab. Suggestions include applicable reusable types and are sorted by match quality. Shift+Tab outdents. Vim mode is off by default and supports Normal, Insert, and Visual modes, a block cursor, movement/edit/yank/paste/marks, <code>&gt;</code>/<code>&lt;</code> indentation, and Escape/Ctrl+[ /Ctrl+C to return to Normal mode.</p>
+
+<h2 id="files">Pug and CSS files</h2><p>The <strong>File</strong> menu creates or opens Pug and CSS documents. <strong>Save</strong> writes the active tab directly to its selected system file, while <strong>Save As</strong> chooses a new location. The CSS file is optional unless custom types are referenced. Each editor tab shows the exact filename being edited. <strong>Hide source</strong> collapses the source panel and remembers that preference. Pugflow intentionally starts blank or with <code>--demo</code>; it does not restore source text in browser storage.</p>
+
+<h2 id="cli">Command line</h2><pre><code>pugflow                         # blank GUI
+pugflow --demo                  # GUI with demo 1
+pugflow --demo 7                # choose any demo from 1–10
+pugflow --vim                   # GUI with Vim enabled
+pugflow --gui diagram.pug --css diagram.css
+pugflow diagram.pug
+pugflow diagram.pug --css styles.css --output diagram.png --scale 2
+pugflow --no-browser --host 127.0.0.1 --port 4173</code></pre>
+<p>Direct rendering uses an installed Edge, Chrome, or Chromium browser. Set <code>PUGFLOW_BROWSER</code> if automatic discovery cannot find it.</p>
+
+<h2 id="reference">Property reference</h2>
+<table><thead><tr><th>Scope</th><th>Fields</th></tr></thead><tbody>
+<tr><td>Canvas</td><td><code>.background</code>, <code>.font</code>, and <code>.defaults</code> with nested <code>node</code>, <code>flow</code>, and <code>.annotation</code></td></tr>
+<tr><td>Graph</td><td><code>id</code>, <code>label</code>, <code>label-position</code>, <code>label-offset</code>, <code>align</code>, <code>vertical-align</code>, <code>layer</code>, <code>placement</code>, <code>relative-to</code>, <code>offset</code>, <code>x-spacing</code>, <code>y-spacing</code>, <code>fill</code>, <code>color</code>, font options, <code>text-outline</code>, <code>text-outline-width</code>, <code>outline</code>, <code>outline-style</code>, <code>outline-width</code>, <code>padding</code>, <code>hidden</code></td></tr>
+<tr><td>Node</td><td><code>id</code>, <code>label</code>, optional <code>layer</code>, <code>top-ports</code>, <code>right-ports</code>, <code>bottom-ports</code>, <code>left-ports</code>, <code>shape</code>, <code>fill</code>, <code>color</code>, <code>outline</code>, <code>outline-style</code>, <code>outline-width</code>, <code>width</code>, <code>height</code>, <code>align</code>, <code>vertical-align</code>, <code>offset</code>, <code>label-offset</code>, font options, <code>text-outline</code>, <code>text-outline-width</code>, shadow, <code>hidden</code></td></tr>
+<tr><td>Flow</td><td><code>from</code>, <code>to</code>, <code>direction</code>, <code>from-direction</code>, <code>to-direction</code>, <code>color</code> (chunky fill), <code>width</code>, <code>outline</code>, <code>outline-width</code>, <code>roundness</code> (corner radius; <code>0</code> for sharp bends), <code>stroke-style</code>, <code>arrow-style</code>, <code>arrow-shape</code>, chunky <code>arrow-height</code> and <code>arrow-head-width</code>, <code>source-face</code>, <code>target-face</code>, <code>label</code>, repeated <code>annotation</code>, <code>label-offset</code>, font options, <code>text-outline</code>, <code>text-outline-width</code>, <code>hidden</code></td></tr>
+<tr><td>Annotation</td><td><code>color</code>, <code>offset</code>, font options, <code>text-outline</code>, <code>text-outline-width</code>, <code>hidden</code></td></tr>
+<tr><td>Font options</td><td><code>font-family</code>, <code>font-size</code>, <code>font-weight</code>, <code>font-style</code>, <code>text-decoration</code>, <code>text-outline</code>, <code>text-outline-width</code></td></tr>
+<tr><td>Image</td><td><code>id</code>, <code>source</code>, <code>width</code>, <code>height</code>, <code>fit</code>, <code>opacity</code>, <code>padding</code>, <code>shape</code>, <code>fill</code>, <code>outline</code>, ports, annotations, shadow, <code>offset</code>, <code>layer</code>, <code>hidden</code></td></tr>
+<tr><td>Shadow</td><td><code>shadow-color</code>, <code>shadow-offset-x</code>, <code>shadow-offset-y</code>, <code>shadow-blur</code>, <code>shadow-opacity</code></td></tr>
+</tbody></table>
+</main></div></body></html>

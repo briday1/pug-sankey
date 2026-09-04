@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Build source-first flow diagrams from indented text." />
+    <link rel="icon" href="data:," />
+    <title>Pugflow</title>
+    <link rel="stylesheet" href="pugflow.css" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-toolbar">
+      <details class="toolbar-menu about-menu">
+        <summary>Pugflow</summary>
+        <div class="toolbar-popover">
+          <strong>ABOUT</strong>
+          <p class="about-version">Version <span>2026.33</span></p>
+          <span class="menu-separator"></span>
+          <a href="https://github.com/briday1/pugflow" target="_blank" rel="noopener">Git repository</a>
+          <a href="https://pypi.org/project/pugflow/" target="_blank" rel="noopener">PyPI package</a>
+          <a href="docs.html" target="_blank" rel="noopener">Open Documentation</a>
+        </div>
+      </details>
+      <nav class="global-actions" aria-label="Application menu">
+        <details class="toolbar-menu file-menu">
+          <summary>File</summary>
+          <div class="toolbar-popover">
+            <strong>SOURCE</strong>
+            <button id="new-pug" type="button">New Pug</button>
+            <button id="new-css" type="button">New CSS</button>
+            <button id="load-source" type="button">Open Pug/CSS…</button>
+            <button id="save-source" type="button">Save</button>
+            <button id="save-source-as" type="button">Save As…</button>
+            <span class="menu-separator"></span>
+            <strong>DIAGRAM</strong>
+            <button id="open-copy-export" type="button">Copy image…</button>
+            <button id="open-save-export" type="button">Save image…</button>
+          </div>
+        </details>
+        <details class="toolbar-menu new-menu">
+          <summary>New</summary>
+          <div class="toolbar-popover"><button id="add-diagram" type="button">Graph</button><button id="add-node" type="button">Node</button><button id="add-image" type="button">Image</button><button id="add-flow" type="button">Flow</button></div>
+        </details>
+        <details class="toolbar-menu settings-menu">
+          <summary>Settings</summary>
+          <div class="toolbar-popover">
+            <button class="theme-toggle" id="theme" type="button" aria-label="Toggle light and dark theme" title="Theme follows your system until toggled"><span class="theme-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg></span><span class="theme-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"></path></svg></span><span>Theme</span><small id="theme-value">System</small></button>
+            <label class="vim-toggle menu-setting"><span>Vim mode</span><input id="vim-mode" type="checkbox" role="switch" /></label>
+          </div>
+        </details>
+        <span class="toolbar-divider" aria-hidden="true"></span>
+        <button class="icon-tool" id="undo-canvas" type="button" aria-label="Undo" title="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"></path><path d="M5 12h8a6 6 0 0 1 6 6"></path></svg></button>
+        <button class="icon-tool" id="redo-canvas" type="button" aria-label="Redo" title="Redo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"></path><path d="M19 12h-8a6 6 0 0 0-6 6"></path></svg></button>
+        <button class="icon-tool" id="cleanup-diagram" type="button" aria-label="Clean up diagram" title="Align connected flow nodes and collapse bends without changing connector faces"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M235.5,216.81c-22.56-11-35.5-34.58-35.5-64.8V134.73a15.94,15.94,0,0,0-10.09-14.87L165,110a8,8,0,0,1-4.48-10.34l21.32-53a28,28,0,0,0-16.1-37,28.14,28.14,0,0,0-35.82,16,.61.61,0,0,0,0,.12L108.9,79a8,8,0,0,1-10.37,4.49L73.11,73.14A15.89,15.89,0,0,0,55.74,76.8C34.68,98.45,24,123.75,24,152a111.45,111.45,0,0,0,31.18,77.53A8,8,0,0,0,61,232H232a8,8,0,0,0,3.5-15.19ZM67.14,88l25.41,10.3a24,24,0,0,0,31.23-13.45l21-53c2.56-6.11,9.47-9.27,15.43-7a12,12,0,0,1,6.88,15.92L145.69,93.76a24,24,0,0,0,13.43,31.14L184,134.73V152c0,.33,0,.66,0,1L55.77,101.71A108.84,108.84,0,0,1,67.14,88Zm48,128a87.53,87.53,0,0,1-24.34-42,8,8,0,0,0-15.49,4,105.16,105.16,0,0,0,18.36,38H64.44A95.54,95.54,0,0,1,40,152a85.9,85.9,0,0,1,7.73-36.29l137.8,55.12c3,18,10.56,33.48,21.89,45.16Z"></path></svg></button>
+      </nav>
+      <input id="source-file" type="file" accept=".pug,.css,text/plain,text/css" multiple hidden />
+      <input id="node-image-file" type="file" accept="image/*" hidden />
+    </header>
+
+    <main class="layers-collapsed">
+      <aside id="source-panel" aria-label="Diagram source">
+        <div class="panel-title"><h1>Diagram source</h1></div>
+        <div class="source-tabs" role="tablist" aria-label="Source documents"><button class="active" data-source-tab="pug" role="tab" aria-selected="true">PUG</button><button data-source-tab="css" role="tab" aria-selected="false">CSS</button></div>
+        <div class="editor-shell">
+          <div class="current-line" id="current-line" aria-hidden="true"></div>
+          <div class="line-numbers" id="line-numbers" aria-hidden="true"></div>
+          <div class="vim-block-cursor" id="vim-block-cursor" aria-hidden="true" hidden></div>
+          <div id="source" role="textbox" aria-label="Diagram source" aria-describedby="editor-hint" aria-multiline="true" contenteditable="plaintext-only" autocapitalize="off" spellcheck="false"></div>
+          <div class="completion-menu" id="completion-menu" role="listbox" aria-label="Source completions" hidden></div>
+        </div>
+        <div class="editor-hint" id="editor-hint"><p class="status" id="status" role="status"></p><span class="editor-hint-actions"><span class="completion-hint"><kbd>Ctrl</kbd>+<kbd>Space</kbd> suggestions</span><strong id="vim-status" hidden></strong></span></div>
+      </aside>
+
+      <button class="source-toggle panel-toggle" id="toggle-source" type="button" aria-controls="source-panel" aria-expanded="true" aria-label="Hide source panel" title="Hide source panel"><span class="toggle-arrow" aria-hidden="true">‹</span><span class="toggle-label">Source</span></button>
+
+      <div class="panel-resizer" id="panel-resizer" role="separator" aria-label="Resize source panel" aria-controls="source-panel" aria-orientation="vertical" tabindex="0"></div>
+
+      <section class="preview" aria-label="Diagram canvas">
+        <div class="canvas-shell" tabindex="0" title="Mouse wheel to zoom; two-finger touchpad gesture to pan"><div id="diagram"></div><div class="canvas-toast" id="canvas-toast" role="status" aria-live="polite"></div><section class="canvas-inspector" id="canvas-inspector" hidden><div class="inspector-drag-handle">Properties</div><div id="inspector-content"></div><div class="inspector-footer"><button id="save-reusable-style" class="inspector-preset-bar" type="button" hidden>Save as preset</button><div class="inspector-footer-row"><button id="delete-selection" class="danger" type="button">Delete</button><button id="close-inspector" type="button">Close</button></div></div></section><aside class="inspector-sidecar" id="inspector-sidecar" hidden aria-label="Detailed settings"><div class="sidecar-header"><span id="sidecar-title">Settings</span><button id="sidecar-close" type="button" aria-label="Close settings">×</button></div><div class="sidecar-content" id="sidecar-content"></div><span class="sidecar-pointer" id="sidecar-pointer" aria-hidden="true"></span></aside></div>
+        <div class="zoom-controls canvas-zoom-controls" aria-label="Canvas zoom"><button id="zoom-out" type="button" title="Zoom out">−</button><select id="canvas-zoom" aria-label="Canvas zoom"><option value="50">50%</option><option value="75">75%</option><option value="100" selected>100%</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select><button id="zoom-in" type="button" title="Zoom in">+</button><button id="zoom-fit" type="button">Fit</button></div>
+        <div class="zoom-controls canvas-mode-controls" aria-label="Canvas mode"><button id="mode-select" type="button" class="mode-active" aria-label="Select mode" aria-pressed="true" title="Select mode — click and drag elements (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 4 7.1 17 2.5-7.4L21 11.1 4 4Z"></path></svg></button><button id="mode-pan" type="button" aria-label="Pan mode" aria-pressed="false" title="Pan mode — drag to move around the canvas (H)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 11V7.5a1.5 1.5 0 0 1 3 0V11 6.5a1.5 1.5 0 0 1 3 0V11 7.5a1.5 1.5 0 0 1 3 0V12 10.5a1.5 1.5 0 0 1 3 0V14c0 4.1-2.9 7-7 7h-1.2a6 6 0 0 1-4.4-1.9L4.4 15.4a1.6 1.6 0 0 1 2.3-2.2L8.5 15v-4Z"></path></svg></button></div>
+      </section>
+
+      <div class="graph-panel-resizer" id="graph-panel-resizer" role="separator" aria-label="Resize objects panel" aria-controls="layers-panel" aria-orientation="vertical" tabindex="0"></div>
+
+      <button class="layers-toggle panel-toggle" id="toggle-layers" type="button" aria-controls="layers-panel" aria-expanded="false" aria-label="Show objects panel" title="Show objects panel"><span class="toggle-arrow" aria-hidden="true">‹</span><span class="toggle-label">Objects</span></button>
+
+      <aside class="layers-panel" id="layers-panel" aria-label="Objects">
+        <div class="layers-title"><div><small>CANVAS STRUCTURE</small><h2>Objects</h2></div></div>
+        <details class="graph-browser-section graph-ordering" open>
+          <summary>Graphs <small id="graph-count">0</small></summary>
+          <div class="layers-list" id="layers-list" role="list" aria-label="Graph stacking order"></div>
+        </details>
+        <section class="graph-browser">
+          <label>Graph<select id="graph-browser-select" aria-label="Choose graph"></select></label>
+          <details class="graph-browser-section" open><summary>Nodes and images <small id="graph-node-count">0</small></summary><div class="graph-item-list" id="graph-nodes-list" role="list" aria-label="Nodes and images in selected graph"></div></details>
+          <details class="graph-browser-section" open><summary>Flows <small id="graph-flow-count">0</small></summary><div class="graph-item-list" id="graph-flows-list" role="list" aria-label="Flows associated with selected graph"></div></details>
+        </section>
+      </aside>
+    </main>
+    <dialog id="graph-builder">
+      <form method="dialog" id="graph-builder-form">
+        <div class="dialog-title"><div><small>CANVAS BUILDER</small><h2 id="graph-builder-title">Add flow node</h2></div></div>
+        <p id="graph-builder-help">Create a node and its relationship together.</p>
+        <div class="builder-grid">
+          <div class="flow-endpoints relationship-only">
+            <section class="flow-endpoint">
+              <label class="connected-source-choice"><span id="builder-from-graph-label">From graph</span><select id="builder-from-graph"></select></label>
+              <fieldset class="flow-only connected-source-choice"><legend>From Object</legend><div id="builder-sources" class="node-choice-list" role="listbox" aria-label="From object"></div></fieldset>
+              <div class="connected-node-only connected-node-summary"><label>Connected node<input id="builder-connected-node" readonly></label><label>Face<input id="builder-connected-face" readonly></label></div>
+              <label class="flow-only existing-flow-only">From direction<select id="builder-from-direction"><option>right</option><option>left</option><option>down</option><option>up</option></select></label>
+            </section>
+            <section class="flow-endpoint flow-only existing-target-only">
+              <label>To graph<select id="builder-to-graph"></select></label>
+              <fieldset><legend>To Object</legend><div id="builder-targets" class="node-choice-list" role="listbox" aria-label="To object"></div></fieldset>
+              <label>To direction<select id="builder-to-direction"><option>right</option><option>left</option><option>down</option><option>up</option></select></label>
+            </section>
+          </div>
+          <label class="connected-node-only">Flow direction<select id="builder-flow-direction"><option value="to">To new node</option><option value="from">From new node</option></select></label>
+          <label class="connected-node-only">New node graph<select id="builder-new-node-graph"></select></label>
+          <label class="new-target-only">Node type<select id="builder-node-type"></select></label>
+          <label class="relationship-only">Flow type<select id="builder-line-type"><option value="">Default flow</option></select></label>
+          <label class="diagram-only">Graph ID<input id="builder-diagram-id" pattern="[A-Za-z][A-Za-z0-9_-]*"></label>
+          <label class="diagram-only">Graph label<input id="builder-diagram-label" placeholder="Optional group title"></label>
+          <label class="diagram-only">Placement<select id="builder-diagram-placement"><option>below</option><option>right</option><option>left</option><option>above</option></select></label>
+          <label class="diagram-only">Relative to<select id="builder-diagram-relative-to"></select></label>
+          <label class="diagram-only">Graph fill<input id="builder-diagram-fill" placeholder="transparent or CSS color"></label>
+          <label class="diagram-only">Graph outline<input id="builder-diagram-outline" placeholder="transparent or CSS color"></label>
+          <label class="new-target-only">ID<input id="builder-id" required pattern="[A-Za-z][A-Za-z0-9_-]*"></label>
+          <label class="new-target-only">Label<input id="builder-label" placeholder="Optional visible text"></label>
+        </div>
+        <p class="dialog-error" id="builder-error" role="alert"></p>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary" id="builder-submit" value="default">Create node</button></div>
+      </form>
+    </dialog>
+    <dialog id="annotation-builder">
+      <form method="dialog" id="annotation-builder-form">
+        <div class="dialog-title"><div><small>CANVAS BUILDER</small><h2>Add annotation</h2></div></div>
+        <p class="dialog-help" id="annotation-builder-help">Add another annotation to the selected node.</p>
+        <div class="builder-grid">
+          <label id="annotation-builder-position-row">Position<select id="annotation-builder-position"><option value="above">Above</option><option value="below">Below</option></select></label>
+          <label>Type<select id="annotation-builder-type"><option value="">Default annotation</option></select></label>
+          <label class="builder-wide">Text<textarea id="annotation-builder-text" rows="3" required>Annotation</textarea></label>
+          <label>Color<input id="annotation-builder-color" placeholder="Optional CSS color"></label>
+          <label>Font size<input id="annotation-builder-font-size" type="number" min="1" placeholder="12"></label>
+          <label>Font family<input id="annotation-builder-font-family" placeholder="Optional"></label>
+          <label>Weight<select id="annotation-builder-font-weight"><option value="">Default</option><option>normal</option><option>500</option><option>600</option><option>bold</option></select></label>
+          <label>Style<select id="annotation-builder-font-style"><option value="">Default</option><option>normal</option><option>italic</option><option>oblique</option></select></label>
+          <label>Decoration<select id="annotation-builder-decoration"><option value="">Default</option><option>none</option><option>underline</option><option>line-through</option><option>overline</option></select></label>
+          <label>Text border<input id="annotation-builder-text-outline" placeholder="Optional CSS color"></label>
+          <label>Border width<input id="annotation-builder-text-outline-width" type="number" min="0" step="0.5" placeholder="0"></label>
+        </div>
+        <p class="dialog-error" id="annotation-builder-error" role="alert"></p>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary" value="default">Add Annotation</button></div>
+      </form>
+    </dialog>
+    <dialog class="export-dialog" id="copy-export-dialog">
+      <form class="export-form" method="dialog" id="copy-export-form">
+        <div class="dialog-title"><div><small>EXPORT</small><h2>Copy diagram</h2></div></div>
+        <p class="export-help">Choose what to copy and its format.</p>
+        <div class="builder-grid">
+          <label class="builder-wide">Content<select id="copy-export-target"></select></label>
+          <label>Format<select id="copy-export-format"><option value="png">PNG image</option><option value="svg">SVG vector</option></select></label>
+          <label id="copy-export-dpi-row">PNG resolution<select id="copy-export-dpi"><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option><option value="600">600 DPI</option></select></label>
+        </div>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary" value="default">Copy</button></div>
+      </form>
+    </dialog>
+    <dialog class="export-dialog" id="save-export-dialog">
+      <form class="export-form" method="dialog" id="save-export-form">
+        <div class="dialog-title"><div><small>EXPORT</small><h2>Save diagram</h2></div></div>
+        <p class="export-help">Choose what to save and its format.</p>
+        <div class="builder-grid">
+          <label class="builder-wide">Content<select id="save-export-target"></select></label>
+          <label>Format<select id="save-export-format"><option value="png">PNG image</option><option value="svg">SVG vector</option></select></label>
+          <label id="save-export-dpi-row">PNG resolution<select id="save-export-dpi"><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option><option value="600">600 DPI</option></select></label>
+        </div>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary" value="default">Save</button></div>
+      </form>
+    </dialog>
+    <dialog id="style-builder">
+      <form method="dialog" id="style-builder-form">
+        <div class="dialog-title"><div><small>CSS TYPE</small><h2>Save <span id="style-builder-kind">node</span> type</h2></div></div>
+        <p class="style-builder-help">Capture the selected element’s appearance as a reusable CSS type.</p>
+        <label class="style-builder-name">Type name<input id="style-builder-name" required pattern="[A-Za-z][A-Za-z0-9_-]*"></label>
+        <label class="style-builder-properties">Properties<textarea id="style-builder-preview" rows="9" readonly spellcheck="false"></textarea></label>
+        <p class="dialog-error" id="style-builder-error" role="alert"></p>
+        <div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary" value="default">Save</button></div>
+      </form>
+    </dialog>
+    <div class="color-picker-popup" id="color-picker-popup" role="dialog" aria-label="Choose color" hidden>
+      <div class="color-picker-heading"><span id="color-picker-preview" aria-hidden="true"></span><strong>Color</strong><output id="color-picker-summary">H 0° · S 0% · V 0%</output></div>
+      <div class="color-picker-surface-wrap"><canvas id="color-picker-saturation" width="260" height="180" tabindex="0" role="slider" aria-label="Saturation and value" aria-valuetext="Saturation 0%, value 0%"></canvas><span id="color-picker-marker" aria-hidden="true"></span></div>
+      <label class="color-picker-hue"><span>Hue</span><input id="color-picker-hue" type="range" min="0" max="359" value="0" aria-label="Hue"></label>
+      <label class="color-picker-alpha"><span>Opacity</span><input id="color-picker-alpha" type="range" min="0" max="100" value="100" aria-label="Opacity"><output id="color-picker-alpha-value">100%</output></label>
+      <div class="color-picker-hsv">
+        <label><span>H</span><input id="color-picker-h" type="number" min="0" max="359" step="1" aria-label="Hue degrees"></label>
+        <label><span>S</span><input id="color-picker-s" type="number" min="0" max="100" step="1" aria-label="Saturation percent"></label>
+        <label><span>V</span><input id="color-picker-v" type="number" min="0" max="100" step="1" aria-label="Value percent"></label>
+      </div>
+      <div class="color-picker-actions"><input id="color-picker-value" spellcheck="false" aria-label="Hex color, optionally with alpha" maxlength="9"></div>
+    </div>
+    <script>window.MathJax = { svg: { fontCache: "none" }, startup: { typeset: false } };</script>
+    <script type="module">const appReady = import("./app.mjs"); const script = document.createElement("script"); script.src = "vendor/mathjax/tex-svg-full.js"; script.onload = async () => { await window.MathJax.startup.promise; await appReady; window.dispatchEvent(new Event("pugflow-math-ready")); }; script.onerror = () => console.error("The bundled math renderer could not be loaded."); document.head.append(script);</script>
+  </body>
+</html>
