@@ -1,1 +1,1 @@
-recursive-include src/pugflow/web *
+recursive-include src/pug_sankey/web *

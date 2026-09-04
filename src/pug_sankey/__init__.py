@@ -1,4 +1,4 @@
-"""Pugflow diagram editor and renderer."""
+"""Pug Sankey diagram editor and renderer."""
 
 __version__ = "2026.33"
 

@@ -1,4 +1,4 @@
-from pugflow.cli import main
+from pug_sankey.cli import main
 
 
 if __name__ == "__main__":

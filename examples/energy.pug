@@ -1,0 +1,58 @@
+// Energy flow — generation through carriers to end use.
+// Values set ribbon thickness; each flow keeps its own color and the
+// ribbons blend from source to target color.
+
+.background #ffffff
+.node-labels show
+.node-values show
+.flow-values show
+.blend 60
+
+node
+  .id sources
+  .label Sources
+  .color #2e6ba7
+node
+  .id electricity
+  .label Electricity
+  .color #3fa06b
+node
+  .id heat
+  .label Heat
+  .color #e07a3f
+node
+  .id homes
+  .label Homes
+  .color #b04a8a
+node
+  .id industry
+  .label Industry
+  .color #c9a227
+  .annotation
+    .above
+      | Largest single consumer
+
+flow
+  .from sources
+  .to electricity
+  .value 45
+flow
+  .from sources
+  .to heat
+  .value 30
+flow
+  .from electricity
+  .to homes
+  .value 26
+flow
+  .from electricity
+  .to industry
+  .value 19
+flow
+  .from heat
+  .to homes
+  .value 12
+flow
+  .from heat
+  .to industry
+  .value 18

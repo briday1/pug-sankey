@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pugflow"
+name = "pug-sankey"
 version = "2026.33"
-description = "Build and export polished flow diagrams from readable Pug source."
+description = "Build and export polished Sankey diagrams from readable Pug source."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -19,7 +19,7 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-pugflow = "pugflow.cli:main"
+pug-sankey = "pug_sankey.cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -27,7 +27,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["pugflow*"]
+include = ["pug_sankey*"]
 
 [tool.setuptools.package-data]
-pugflow = ["web/*", "web/vendor/mathjax/*"]
+pug_sankey = ["web/*", "web/vendor/mathjax/*"]

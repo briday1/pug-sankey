@@ -36,9 +36,6 @@ export function indentSourceSelection(value, selectionStart, selectionEnd, outde
 export function setNodeOffsetField(value, labelLineNumber, prefix, x, y) {
   const lines = value.split("\n");
   const labelIndex = labelLineNumber - 1;
-  if (/^\s*image(?:\s|$)/.test(lines[labelIndex] ?? "")) {
-    return setChildOffsetField(value, labelLineNumber, `.${prefix}`, x, y);
-  }
   const indentation = lines[labelIndex]?.match(/^\s*/)?.[0] ?? "";
   if (lines[labelIndex]?.trim().match(/^\.label(?:\s|$)/)) {
     const propertyIndent = indentationWidth(lines[labelIndex]);
@@ -145,8 +142,7 @@ function setReusableLine(value, start, end, fieldIndent, type, knownTypes) {
   else lines.splice(start + 1, 0, replacement);
   const baseIndent = indentationWidth(fieldIndent);
   const appearance = new Set([
-    "color", "outline", "outline-width", "width", "roundness", "stroke-style", "arrow-style", "arrow-shape",
-    "arrow-height", "arrow-head-width", "label-position", "shadow-color", "shadow-offset-x", "shadow-offset-y",
+    "color", "opacity", "label-color", "label-position", "shadow-color", "shadow-offset-x", "shadow-offset-y",
     "shadow-blur", "shadow-opacity", "font-family", "font-size", "font-weight", "font-style", "text-decoration",
     "text-outline", "text-outline-width",
   ]);
@@ -282,15 +278,16 @@ export function appendNodeAnnotation(value, labelLineNumber, { position = "above
 }
 
 /** Append an independently styled annotation directly inside a flow. */
-export function appendFlowAnnotation(value, flowLineNumber, { text = "Annotation", type = "", color = "", fontSize = "", fontFamily = "", fontWeight = "", fontStyle = "", textDecoration = "", textOutline = "", textOutlineWidth = "" } = {}) {
+export function appendFlowAnnotation(value, flowLineNumber, { text = "Annotation", position = "above", type = "", color = "", fontSize = "", fontFamily = "", fontWeight = "", fontStyle = "", textDecoration = "", textOutline = "", textOutlineWidth = "" } = {}) {
   const lines = value.split("\n");
   const flowIndex = flowLineNumber - 1;
   const flowIndent = indentationWidth(lines[flowIndex] ?? "");
   const indentation = (lines[flowIndex]?.match(/^\s*/)?.[0] ?? "") + "  ";
+  const side = position === "below" ? "below" : "above";
   let end = flowIndex + 1;
   while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > flowIndent)) end += 1;
   const annotation = [
-    `${indentation}.annotation ${text}`,
+    `${indentation}.annotation-${side} ${text}`,
     ...(type ? [`${indentation}  .${type}`] : []),
     ...(color ? [`${indentation}  .color ${color}`] : []),
     ...(fontSize ? [`${indentation}  .font-size ${fontSize}`] : []),
@@ -326,12 +323,6 @@ export function setDeclarationOffsetField(value, declarationLineNumber, x, y) {
 
 function nodeRange(lines, labelLineNumber) {
   const labelIndex = labelLineNumber - 1;
-  if (/^\s*image(?:\s|$)/.test(lines[labelIndex] ?? "")) {
-    const indent = indentationWidth(lines[labelIndex]);
-    let end = labelIndex + 1;
-    while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > indent)) end += 1;
-    return { start: labelIndex, end, fieldIndent: (lines[labelIndex].match(/^\s*/)?.[0] ?? "") + "  " };
-  }
   const propertyIndent = indentationWidth(lines[labelIndex] ?? "");
   let start = labelIndex - 1;
   while (start >= 0 && indentationWidth(lines[start]) >= propertyIndent) start -= 1;
@@ -372,17 +363,14 @@ export function setNodeField(value, labelLineNumber, field, fieldValue) {
 
 
 export function setNodeGeometry(value, declarationLineNumber, width, height, offsetX, offsetY) {
-  let next = setNodeField(value, declarationLineNumber, "width", offsetNumber(width));
-  next = setNodeField(next, declarationLineNumber, "height", offsetNumber(height));
-  return setNodeField(next, declarationLineNumber, "offset", offsetTuple(offsetX, offsetY));
+  return setNodeField(value, declarationLineNumber, "offset", offsetTuple(offsetX, offsetY));
 }
 
 export const setImageGeometry = setNodeGeometry;
 
-export function setGraphGeometry(value, declarationLineNumber, width, height, offsetX = 0, offsetY = 0) {
-  let next = setStructuralField(value, declarationLineNumber, "width", offsetNumber(width));
-  next = setStructuralField(next, declarationLineNumber, "height", offsetNumber(height));
-  return setStructuralField(next, declarationLineNumber, "frame-offset", offsetTuple(offsetX, offsetY));
+/** Sankey has no graphs — kept as a no-op so existing imports keep working. */
+export function setGraphGeometry(value) {
+  return value;
 }
 
 export function removeNodeField(value, labelLineNumber, field) {
@@ -396,10 +384,10 @@ export function removeNodeField(value, labelLineNumber, field) {
 
 /** Node field and group names that can never be a reusable `@node` class reference. */
 const NODE_RESERVED_NAMES = new Set([
-  "node", "flow", "line", "annotation", "branch", "merge", "graph", "defaults", "above", "below",
-  "id", "label", "layer", "hidden", "offset", "label-offset", "from", "to",
-  "shape", "fill", "color", "outline", "outline-style", "outline-width", "width", "height", "align",
-  "top-ports", "right-ports", "bottom-ports", "left-ports",
+  "node", "flow", "annotation", "defaults", "above", "below",
+  "id", "label", "layer", "hidden", "offset", "label-offset", "from", "to", "value",
+  "annotation-above", "annotation-below",
+  "color", "opacity", "label-color",
   "shadow-color", "shadow-offset-x", "shadow-offset-y", "shadow-blur", "shadow-opacity",
   "font-family", "font-size", "font-weight", "font-style", "text-decoration", "text-outline", "text-outline-width",
 ]);
@@ -424,7 +412,7 @@ export function setNodeType(value, labelLineNumber, type, knownTypes = []) {
   lines[range.start] = indentation + "node";
   let end = range.end;
   const styleFields = new Set([
-    "shape", "fill", "color", "outline", "outline-style", "outline-width", "width", "height", "align",
+    "color", "opacity", "label-color",
     "shadow-color", "shadow-offset-x", "shadow-offset-y", "shadow-blur", "shadow-opacity",
   ]);
   for (let index = end - 1; index > range.start; index -= 1) {
@@ -442,28 +430,9 @@ export function setNodeType(value, labelLineNumber, type, knownTypes = []) {
   return lines.join("\n");
 }
 
-/** Apply (or clear) a reusable @graph class on a graph declaration. */
-export function setGraphType(value, graphLineNumber, type, knownTypes = []) {
-  const lines = value.split("\n");
-  const start = graphLineNumber - 1;
-  if (!lines[start]) return value;
-  const indent = indentationWidth(lines[start]);
-  const fieldIndent = (lines[start].match(/^\s*/)?.[0] ?? "") + "  ";
-  let end = start + 1;
-  while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > indent)) end += 1;
-  const names = new Set(knownTypes);
-  const existing = lines.findIndex((line, index) => index > start && index < end
-    && indentationWidth(line) === indentationWidth(fieldIndent)
-    && /^\.[a-zA-Z][\w-]*$/.test(line.trim())
-    && names.has(line.trim().slice(1)));
-  if (!type) {
-    if (existing >= 0) lines.splice(existing, 1);
-    return lines.join("\n");
-  }
-  const replacement = fieldIndent + "." + type.replace(/^\./, "");
-  if (existing >= 0) lines[existing] = replacement;
-  else lines.splice(start + 1, 0, replacement);
-  return lines.join("\n");
+/** Sankey has no graphs — kept as a no-op so existing imports keep working. */
+export function setGraphType(value) {
+  return value;
 }
 
 function nodeDeclaration(type, indentation, id, label) {
@@ -476,23 +445,9 @@ function nodeDeclaration(type, indentation, id, label) {
   ];
 }
 
+/** Sankey declarations live directly at the source root — no graph wrapping needed. */
 export function ensureGraphComponents(value) {
-  const lines = value.split("\n");
-  const rootIndex = lines.findIndex((line) => /^#(?:canvas|diagram)(?:\(|$)/.test(line.trim()));
-  if (rootIndex < 0) return value;
-  const rootIndent = indentationWidth(lines[rootIndex]);
-  let end = rootIndex + 1;
-  while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > rootIndent)) end += 1;
-  const childWidth = rootIndent + 2;
-  if (lines.some((line, index) => index > rootIndex && index < end && indentationWidth(line) === childWidth && line.trim() === "graph")) return value;
-  const settings = new Set([".background", ".font", ".annotation", ".defaults"]);
-  const firstGraphChild = lines.findIndex((line, index) => index > rootIndex && index < end
-    && indentationWidth(line) === childWidth && !settings.has(line.trim().split(/\s/)[0]));
-  if (firstGraphChild < 0) return value;
-  const indentation = (lines[rootIndex].match(/^\s*/)?.[0] ?? "") + "  ";
-  const graphBlock = lines.slice(firstGraphChild, end).map((line) => "  " + line);
-  lines.splice(firstGraphChild, end - firstGraphChild, `${indentation}graph`, ...graphBlock);
-  return lines.join("\n");
+  return value;
 }
 
 function appendToContainer(lines, containerLineNumber, declarations) {
@@ -510,39 +465,43 @@ function appendToContainer(lines, containerLineNumber, declarations) {
   lines.splice(end, 0, ...declarations(indentation));
 }
 
-function flowDeclaration(indentation, { from = "", to = "", direction = "right", fromDirection = direction, toDirection = fromDirection, lineType = "" } = {}) {
+function flowDeclaration(indentation, { from = "", to = "", value = 10, color = "", label = "", flowType = "", lineType = "" } = {}) {
   const fieldIndent = indentation + "  ";
+  const preset = String(flowType || lineType || "").replace(/^\./, "");
   return [
     `${indentation}flow`,
+    ...(preset ? [`${fieldIndent}.${preset}`] : []),
     `${fieldIndent}.from ${from}`,
     `${fieldIndent}.to ${to}`,
-    `${fieldIndent}.from-direction ${fromDirection}`,
-    `${fieldIndent}.to-direction ${toDirection}`,
-    ...(lineType ? [`${fieldIndent}.${lineType.replace(/^\./, "")}`] : []),
+    `${fieldIndent}.value ${offsetNumber(Number(value) || 10)}`,
+    ...(color ? [`${fieldIndent}.color ${color}`] : []),
+    ...(label ? [`${fieldIndent}.label ${label}`] : []),
   ];
 }
 
-export function appendGraphNode(value, graphLineNumber, { nodeType = "node", id = "", label = "" } = {}) {
-  const lines = value.split("\n");
-  appendToContainer(lines, graphLineNumber, (indentation) => nodeDeclaration(nodeType, indentation, id, label));
-  return lines.join("\n");
+/** Sankey has no graphs or images — append a plain `node` at the source root. */
+export function appendGraphNode(value, graphLineNumber, { nodeType = "node", id = "", label = "", color = "" } = {}) {
+  return appendSankeyNode(value, { nodeType, id, label, color });
 }
 
-export function appendGraphImage(value, graphLineNumber, { id = "", source = "", width = 64, height = 64 } = {}) {
-  const lines = value.split("\n");
-  appendToContainer(lines, graphLineNumber, (indentation) => [
-    `${indentation}image`,
-    `${indentation}  .id ${id}`,
-    `${indentation}  .source ${source}`,
-    `${indentation}  .width ${width}`,
-    `${indentation}  .height ${height}`,
+/** Sankey has no graphs or images — append a plain `node` at the source root. */
+export function appendGraphImage(value, graphLineNumber, { id = "", label = "", color = "" } = {}) {
+  return appendSankeyNode(value, { id, label, color });
+}
+
+function appendSankeyNode(value, { nodeType = "node", id = "", label = "", color = "" } = {}) {
+  const lines = value ? value.split("\n") : [];
+  appendToContainer(lines, 0, (indentation) => [
+    ...nodeDeclaration(nodeType, indentation, id, label),
+    ...(color ? [`${indentation}  .color ${color}`] : []),
   ]);
   return lines.join("\n");
 }
 
+/** Append a Sankey `flow` at the source root (flows are never nested in a container). */
 export function appendFlowReference(value, scopeLineNumber, options = {}) {
   const lines = value ? value.split("\n") : [];
-  appendToContainer(lines, scopeLineNumber, (indentation) => flowDeclaration(indentation, options));
+  appendToContainer(lines, 0, (indentation) => flowDeclaration(indentation, options));
   return lines.join("\n");
 }
 
@@ -571,64 +530,14 @@ export function moveDeclarationToContainer(value, declarationLineNumber, contain
   return lines.join("\n");
 }
 
+/** Sankey has no graphs — move the declaration to the source root. */
 export function moveNodeToGraph(value, labelLineNumber, graphLineNumber) {
-  const lines = value.split("\n");
-  const node = nodeRange(lines, labelLineNumber);
-  const originalIndent = lines[node.start]?.match(/^\s*/)?.[0] ?? "";
-  const block = lines.slice(node.start, node.end);
-  lines.splice(node.start, node.end - node.start);
-  let graphIndex = graphLineNumber - 1;
-  if (node.start < graphIndex) graphIndex -= block.length;
-  const graphIndent = indentationWidth(lines[graphIndex] ?? "");
-  let graphEnd = graphIndex + 1;
-  while (graphEnd < lines.length && (!lines[graphEnd].trim() || indentationWidth(lines[graphEnd]) > graphIndent)) graphEnd += 1;
-  const targetIndent = (lines[graphIndex]?.match(/^\s*/)?.[0] ?? "") + "  ";
-  lines.splice(graphEnd, 0, ...block.map((line) => targetIndent + line.slice(originalIndent.length)));
-  return lines.join("\n");
+  return moveDeclarationToContainer(value, labelLineNumber, graphLineNumber > 0 ? 0 : graphLineNumber);
 }
 
-export function appendDiagramNode(value, { nodeType = "node", id = "", label = "", diagramId = "", diagramLabel = "", diagramPlacement = "", diagramRelativeTo = "", diagramFill = "", diagramOutline = "" } = {}) {
-  let lines = ensureGraphComponents(value).split("\n");
-  const rootIndex = lines.findIndex((line) => /^#(?:canvas|diagram)(?:\(|$)/.test(line.trim()));
-  if (rootIndex < 0) {
-    if (lines.length === 1 && !lines[0]) lines = [];
-    while (lines.length && !lines.at(-1).trim()) lines.pop();
-    if (lines.length) lines.push("");
-    lines.push("graph",
-      ...(diagramId ? [`  .id ${diagramId}`] : []),
-      ...(diagramLabel ? [`  .label ${diagramLabel}`] : []),
-      ...(diagramRelativeTo ? [`  .placement ${diagramPlacement || "below"}`, `  .relative-to ${diagramRelativeTo}`] : []),
-      ...(diagramFill ? [`  .fill ${diagramFill}`] : []),
-      ...(diagramOutline ? [`  .outline ${diagramOutline}`] : []),
-      ...nodeDeclaration(nodeType, "  ", id, label));
-    return lines.join("\n");
-  }
-  const rootIndent = indentationWidth(lines[rootIndex]);
-  let end = rootIndex + 1;
-  while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > rootIndent)) end += 1;
-  const indentation = (lines[rootIndex].match(/^\s*/)?.[0] ?? "") + "  ";
-  const fieldIndent = indentation + "  ";
-  const childWidth = rootIndent + 2;
-  const alreadyComponentized = lines.some((line, index) => index > rootIndex && index < end
-    && indentationWidth(line) === childWidth && line.trim() === "graph");
-  if (!alreadyComponentized) {
-    const settings = new Set([".background", ".font", ".annotation", ".defaults"]);
-    const firstGraphChild = lines.findIndex((line, index) => index > rootIndex && index < end
-      && indentationWidth(line) === childWidth && !settings.has(line.trim().split(/\s/)[0]));
-    if (firstGraphChild >= 0) {
-      const graphBlock = lines.slice(firstGraphChild, end).map((line) => "  " + line);
-      lines.splice(firstGraphChild, end - firstGraphChild, `${indentation}graph`, ...graphBlock);
-      end = firstGraphChild + graphBlock.length + 1;
-    }
-  }
-  lines.splice(end, 0, `${indentation}graph`,
-    ...(diagramId ? [`${fieldIndent}.id ${diagramId}`] : []),
-    ...(diagramLabel ? [`${fieldIndent}.label ${diagramLabel}`] : []),
-    ...(diagramRelativeTo ? [`${fieldIndent}.placement ${diagramPlacement || "below"}`, `${fieldIndent}.relative-to ${diagramRelativeTo}`] : []),
-    ...(diagramFill ? [`${fieldIndent}.fill ${diagramFill}`] : []),
-    ...(diagramOutline ? [`${fieldIndent}.outline ${diagramOutline}`] : []),
-    ...nodeDeclaration(nodeType, fieldIndent, id, label));
-  return lines.join("\n");
+/** Sankey has no diagrams/graphs — append a plain `node` at the source root. */
+export function appendDiagramNode(value, { nodeType = "node", id = "", label = "", color = "" } = {}) {
+  return appendSankeyNode(value, { nodeType, id, label, color });
 }
 
 export function removeDeclaration(value, declarationLineNumber) {
@@ -691,7 +600,7 @@ export function removeConnectionLabel(value, declarationLineNumber) {
   for (let index = end - 1; index > start; index -= 1) {
     const text = lines[index].trim();
     const indentation = indentationWidth(lines[index]);
-    if ((indentation === baseIndent + 2 && /^\.(?:line\.)?label(?:\s|$)/.test(text))
+    if ((indentation === baseIndent + 2 && /^\.label(?:\s|$)/.test(text))
       || (indentation === baseIndent + 4 && /^\.label(?:\s|$)/.test(text))) lines.splice(index, 1);
   }
   return lines.join("\n");
@@ -708,55 +617,18 @@ export function removeAncestorDeclaration(value, lineNumber, type) {
   return value;
 }
 
+/** Remove every `flow` whose `.from` or `.to` references the given node id. */
 export function removeNodeReferences(value, id) {
   let result = value;
   const escapedId = escapeRegExp(id);
   while (true) {
     const lines = result.split("\n");
-    const refIndex = lines.findIndex((line) => new RegExp(`^\\s*\\.ref\\s+${escapedId}\\s*$`).test(line));
-    if (refIndex < 0) break;
-    let sourceIndex = refIndex - 1;
-    while (sourceIndex >= 0 && !(lines[sourceIndex].trim() === ".source" && indentationWidth(lines[sourceIndex]) < indentationWidth(lines[refIndex]))) sourceIndex -= 1;
-    let mergeIndex = sourceIndex - 1;
-    while (mergeIndex >= 0 && !(lines[mergeIndex].trim() === ".merge" && indentationWidth(lines[mergeIndex]) < indentationWidth(lines[sourceIndex]))) mergeIndex -= 1;
-    if (sourceIndex < 0 || mergeIndex < 0) break;
-    const mergeIndent = indentationWidth(lines[mergeIndex]);
-    let mergeEnd = mergeIndex + 1;
-    while (mergeEnd < lines.length && (!lines[mergeEnd].trim() || indentationWidth(lines[mergeEnd]) > mergeIndent)) mergeEnd += 1;
-    const sourceCount = lines.slice(mergeIndex + 1, mergeEnd).filter((line) => indentationWidth(line) === mergeIndent + 2 && line.trim() === ".source").length;
-    if (sourceCount > 2) result = removeDeclaration(result, sourceIndex + 1);
-    else {
-      const targetLabel = lines.findIndex((line, index) => index > mergeIndex && index < mergeEnd && indentationWidth(line) === mergeIndent + 4 && /^\.label(?:\s|$)/.test(line.trim()));
-      if (targetLabel >= 0) result = moveNodeToDiagram(result, targetLabel + 1);
-      result = removeDeclaration(result, mergeIndex + 1);
-    }
-  }
-  while (true) {
-    const lines = result.split("\n");
     const endpoint = lines.findIndex((line) => new RegExp(`^\\s*\\.(?:from|to)\\s+${escapedId}\\s*$`).test(line));
     if (endpoint < 0) break;
-    let relationship = endpoint - 1;
-    while (relationship >= 0 && !([".connect", ".flow", "flow"].includes(lines[relationship].trim()) && indentationWidth(lines[relationship]) < indentationWidth(lines[endpoint]))) relationship -= 1;
-    if (relationship < 0) break;
-    result = removeDeclaration(result, relationship + 1);
-  }
-  while (true) {
-    const lines = result.split("\n");
-    const memberIndex = lines.findIndex((line) => {
-      const match = line.match(/^\s*\.members\s+(.*)$/);
-      return match?.[1].split(/[\s,]+/).includes(id);
-    });
-    if (memberIndex < 0) break;
-    const prefix = lines[memberIndex].match(/^(\s*\.members\s+)/)?.[1] ?? "";
-    const remaining = lines[memberIndex].slice(prefix.length).split(/[\s,]+/).filter((member) => member && member !== id);
-    if (remaining.length) {
-      lines[memberIndex] = prefix + remaining.join(" ");
-      result = lines.join("\n");
-      continue;
-    }
-    let graphIndex = memberIndex - 1;
-    while (graphIndex >= 0 && !(lines[graphIndex].trim() === "graph" && indentationWidth(lines[graphIndex]) < indentationWidth(lines[memberIndex]))) graphIndex -= 1;
-    result = graphIndex >= 0 ? removeDeclaration(result, graphIndex + 1) : lines.filter((_, index) => index !== memberIndex).join("\n");
+    let flow = endpoint - 1;
+    while (flow >= 0 && !(lines[flow].trim() === "flow" && indentationWidth(lines[flow]) < indentationWidth(lines[endpoint]))) flow -= 1;
+    if (flow < 0) break;
+    result = removeDeclaration(result, flow + 1);
   }
   return result;
 }
@@ -764,58 +636,23 @@ export function removeNodeReferences(value, id) {
 export function renameNodeReferences(value, oldId, newId) {
   if (!oldId || !newId || oldId === newId) return value;
   const escapedId = escapeRegExp(oldId);
-  return value.split("\n").map((line) => {
-    const endpoint = line.replace(new RegExp(`^(\\s*\\.(?:ref|from|to)\\s+)${escapedId}(\\s*)$`), `$1${newId}$2`);
-    const members = endpoint.match(/^(\s*\.members\s+)(.*)$/);
-    if (!members) return endpoint;
-    return members[1] + members[2].split(/([\s,]+)/).map((token) => token === oldId ? newId : token).join("");
-  }).join("\n");
-}
-
-export function renameGraphReferences(value, oldId, newId) {
-  if (!oldId || !newId || oldId === newId) return value;
-  const escapedId = escapeRegExp(oldId);
   return value.split("\n").map((line) => line.replace(
-    new RegExp(`^(\\s*\\.relative-to\\s+)${escapedId}(\\s*)$`),
+    new RegExp(`^(\\s*\\.(?:from|to)\\s+)${escapedId}(\\s*)$`),
     `$1${newId}$2`,
   )).join("\n");
 }
 
-export function removeMergeEdge(value, sourceLineNumber) {
-  const lines = value.split("\n");
-  const sourceIndex = sourceLineNumber - 1;
-  let mergeIndex = sourceIndex - 1;
-  while (mergeIndex >= 0 && !(lines[mergeIndex].trim() === ".merge" && indentationWidth(lines[mergeIndex]) < indentationWidth(lines[sourceIndex]))) mergeIndex -= 1;
-  if (mergeIndex < 0) return value;
-  const mergeIndent = indentationWidth(lines[mergeIndex]);
-  let mergeEnd = mergeIndex + 1;
-  while (mergeEnd < lines.length && (!lines[mergeEnd].trim() || indentationWidth(lines[mergeEnd]) > mergeIndent)) mergeEnd += 1;
-  const sources = lines.map((line, index) => ({ line, index })).filter(({ line, index }) => index > mergeIndex && index < mergeEnd && indentationWidth(line) === mergeIndent + 2 && line.trim() === ".source");
-  if (sources.length > 2) return removeDeclaration(value, sourceLineNumber);
-  const targetLabel = lines.findIndex((line, index) => index > mergeIndex && index < mergeEnd && indentationWidth(line) === mergeIndent + 4 && /^\.label(?:\s|$)/.test(line.trim()));
-  let result = targetLabel >= 0 ? moveNodeToDiagram(value, targetLabel + 1) : value;
-  return removeDeclaration(result, mergeIndex + 1);
+/** Sankey has no graphs — kept as a no-op so existing imports keep working. */
+export function renameGraphReferences(value) {
+  return value;
 }
 
+/** Sankey has no merge edges — kept as a no-op so existing imports keep working. */
+export function removeMergeEdge(value) {
+  return value;
+}
+
+/** Sankey declarations live directly at the source root — move the declaration there. */
 export function moveNodeToDiagram(value, labelLineNumber) {
-  let lines = value.split("\n");
-  const node = nodeRange(lines, labelLineNumber);
-  const originalIndent = lines[node.start].match(/^\s*/)?.[0] ?? "";
-  const block = lines.slice(node.start, node.end);
-  lines.splice(node.start, node.end - node.start);
-  const rootIndex = lines.findIndex((line) => /^#(?:canvas|diagram)(?:\(|$)/.test(line.trim()));
-  if (rootIndex < 0) {
-    while (lines.length && !lines.at(-1).trim()) lines.pop();
-    if (lines.length) lines.push("");
-    lines.push("graph", ...block.map((line) => `  ${line.slice(originalIndent.length)}`));
-    return lines.join("\n");
-  }
-  const rootIndent = indentationWidth(lines[rootIndex] ?? "");
-  let end = rootIndex + 1;
-  while (end < lines.length && (!lines[end].trim() || indentationWidth(lines[end]) > rootIndent)) end += 1;
-  const diagramIndent = (lines[rootIndex]?.match(/^\s*/)?.[0] ?? "") + "  ";
-  const targetIndent = diagramIndent + "  ";
-  const moved = block.map((line) => targetIndent + line.slice(originalIndent.length));
-  lines.splice(end, 0, `${diagramIndent}graph`, ...moved);
-  return lines.join("\n");
+  return moveDeclarationToContainer(value, labelLineNumber, 0);
 }

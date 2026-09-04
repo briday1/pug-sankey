@@ -1,0 +1,75 @@
+// Website traffic funnel — channels into pages into outcomes.
+// Flow labels are shown so each ribbon carries its own text.
+
+.node-labels show
+.node-values show
+.flow-labels show
+.flow-values show
+.blend 55
+
+node
+  .id visits
+  .label Visits
+  .color #2e6ba7
+node
+  .id organic
+  .label Organic
+  .color #3fa06b
+node
+  .id paid
+  .label Paid
+  .color #e07a3f
+node
+  .id social
+  .label Social
+  .color #5b8def
+node
+  .id landing
+  .label Landing
+  .color #b04a8a
+node
+  .id signup
+  .label Signup
+  .color #c9a227
+node
+  .id churn
+  .label Bounce
+  .color #d1563f
+
+flow
+  .from visits
+  .to organic
+  .value 52
+  .label search
+flow
+  .from visits
+  .to paid
+  .value 30
+  .label ads
+flow
+  .from visits
+  .to social
+  .value 18
+  .label shares
+flow
+  .from organic
+  .to landing
+  .value 40
+flow
+  .from paid
+  .to landing
+  .value 24
+flow
+  .from social
+  .to landing
+  .value 9
+flow
+  .from landing
+  .to signup
+  .value 21
+  .label convert
+flow
+  .from landing
+  .to churn
+  .value 52
+  .label leave

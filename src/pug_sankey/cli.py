@@ -1,4 +1,4 @@
-"""Command-line interface for Pugflow."""
+"""Command-line interface for Pug Sankey."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from .render import render_png
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="pugflow",
+        prog="pug-sankey",
         description="Open the editor or render a Pug diagram to PNG.",
     )
     parser.add_argument("input", nargs="?", type=Path, help="Pug source to render. Omit to open the editor.")
@@ -30,9 +30,9 @@ def build_parser():
         nargs="?",
         const=1,
         type=int,
-        choices=range(1, 11),
+        choices=range(1, 9),
         metavar="N",
-        help="Open the GUI with demo N (1-10; default: 1).",
+        help="Open the GUI with demo N (1-8; default: 1).",
     )
     parser.add_argument("--quiet", action="store_true", help="Suppress HTTP request logging.")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")

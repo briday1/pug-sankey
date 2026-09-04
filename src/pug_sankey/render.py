@@ -13,7 +13,7 @@ from .server import create_server
 
 
 def find_browser() -> str:
-    configured = os.environ.get("PUGFLOW_BROWSER")
+    configured = os.environ.get("PUG_SANKEY_BROWSER")
     candidates = [configured] if configured else []
     candidates += [shutil.which(name) for name in ("msedge", "chrome", "chromium", "chromium-browser")]
     if os.name == "nt":
@@ -24,7 +24,7 @@ def find_browser() -> str:
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             return candidate
-    raise RuntimeError("No Chromium browser found. Install Edge/Chrome/Chromium or set PUGFLOW_BROWSER.")
+    raise RuntimeError("No Chromium browser found. Install Edge/Chrome/Chromium or set PUG_SANKEY_BROWSER.")
 
 
 def render_png(source_path: Path, output_path: Path, *, css_path: Path | None = None, scale: float = 2, timeout: float = 30) -> None:
@@ -45,7 +45,7 @@ def render_png(source_path: Path, output_path: Path, *, css_path: Path | None = 
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     browser = None
-    profile = Path(tempfile.mkdtemp(prefix="pugflow-render-"))
+    profile = Path(tempfile.mkdtemp(prefix="pug-sankey-render-"))
     try:
         url = f"http://127.0.0.1:{server.server_address[1]}/render.html?scale={scale}"
         browser = subprocess.Popen([find_browser(), "--headless=new", "--disable-gpu", "--no-first-run", "--disable-extensions", f"--user-data-dir={profile}", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -1,10 +1,10 @@
-# Build with: pyinstaller pugflow.spec
+# Build with: pyinstaller pug_sankey.spec
 
 a = Analysis(
-    ["src/pugflow/__main__.py"],
+    ["src/pug_sankey/__main__.py"],
     pathex=["src"],
     binaries=[],
-    datas=[("src/pugflow/web", "pugflow/web")],
+    datas=[("src/pug_sankey/web", "pug_sankey/web")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -20,7 +20,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="pugflow",
+    name="pug-sankey",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

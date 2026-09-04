@@ -1,4 +1,4 @@
-"""Dependency-free HTTP server for the Pugflow frontend."""
+"""Dependency-free HTTP server for the Pug Sankey frontend."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ STATIC_ROOT = Path(__file__).resolve().with_name("web")
 class DiagramRequestHandler(SimpleHTTPRequestHandler):
     """Serve packaged assets and expose a small health endpoint."""
 
-    server_version = f"Pugflow/{__version__}"
+    server_version = f"PugSankey/{__version__}"
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map, ".mjs": "text/javascript"}
 
     def __init__(self, *args, directory=None, **kwargs):
@@ -118,7 +118,7 @@ def serve(host="127.0.0.1", port=4173, *, open_browser=True, quiet=False, vim=Fa
         query.extend(["project=1", f"name={quote(Path(pug_path).stem)}", f"pug_name={quote(Path(pug_path).name)}"])
         if css_path: query.append(f"css_name={quote(Path(css_path).name)}")
     url = f"http://{browser_host}:{actual_port}" + ("?" + "&".join(query) if query else "")
-    print(f"Pugflow {__version__}: {url}")
+    print(f"Pug Sankey {__version__}: {url}")
     print("Press Ctrl+C to stop.")
 
     if open_browser:
@@ -127,7 +127,7 @@ def serve(host="127.0.0.1", port=4173, *, open_browser=True, quiet=False, vim=Fa
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nStopping Pugflow.")
+        print("\nStopping Pug Sankey.")
     finally:
         server.server_close()
     return url
