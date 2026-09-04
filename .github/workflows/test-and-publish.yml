@@ -38,7 +38,7 @@ jobs:
 
   pages:
     name: Deploy to GitHub Pages
-    needs: [test, pypi]
+    needs: [test]
     permissions:
       contents: read
       pages: write
@@ -50,27 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-      - name: Use published PyPI version
-        env:
-          VERSION: ${{ needs.pypi.outputs.version }}
-        run: |
-          python <<'PYTHON_EOF'
-          import os
-          import re
-          from pathlib import Path
-
-          path = Path("src/pug_sankey/web/index.html")
-          source = path.read_text()
-          updated, count = re.subn(
-              r'Version <span>[^<]+</span>',
-              f'Version <span>{os.environ["VERSION"]}</span>',
-              source,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit(f"Could not update version in {path}")
-          path.write_text(updated)
-          PYTHON_EOF
       - name: Cache-bust browser assets
         env:
           ASSET_VERSION: ${{ github.sha }}
@@ -102,6 +81,7 @@ jobs:
   pypi:
     name: Version, build, and publish to PyPI
     needs: test
+    if: secrets.PYPI_API_TOKEN != ''
     outputs:
       version: ${{ steps.set-version.outputs.version }}
     runs-on: ubuntu-latest
