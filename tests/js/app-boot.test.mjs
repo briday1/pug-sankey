@@ -34,3 +34,14 @@ test("canvas still edits color/label/value via the inspector", () => {
   assert.ok(app.includes('data-flow-field="value"'), "flow value field present");
   assert.ok(app.includes('data-flow-field="color"'), "flow color field present");
 });
+
+test("app fetches the CLI-provided project file (--gui)", () => {
+  assert.ok(app.includes('launchParams.get("project") === "1"'), "reads the project param");
+  assert.ok(app.includes('fetch("/__project.pug")'), "fetches the project pug");
+  assert.ok(app.includes('fetch("/__project.css")'), "fetches the project css");
+});
+
+test("app honors the --vim launch flag", () => {
+  assert.ok(app.includes('launchParams.get("vim") === "1"'), "reads the vim param");
+  assert.ok(app.includes('attachVimMode('), "attaches vim mode");
+});

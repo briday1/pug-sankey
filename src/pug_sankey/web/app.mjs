@@ -103,13 +103,28 @@ const flowsList = $("#graph-flows-list");
 const launchParams = new URLSearchParams(location.search);
 const requestedDemo = Number(launchParams.get("demo"));
 const selectedDemo = Number.isInteger(requestedDemo) && DEMOS[requestedDemo - 1] ? requestedDemo - 1 : (launchParams.has("demo") ? 0 : -1);
+// A project file passed on the command line (pug-sankey file.pug [--gui]) is
+// served by the backend and takes precedence over demos and saved workspace.
+const wantsProject = launchParams.get("project") === "1";
 
-let pugSource = selectedDemo >= 0 ? (DEMOS[selectedDemo].pug ?? "") : "";
-let cssSource = selectedDemo >= 0 ? (DEMOS[selectedDemo].css ?? "") : "";
+let pugSource = selectedDemo >= 0 && !wantsProject ? (DEMOS[selectedDemo].pug ?? "") : "";
+let cssSource = selectedDemo >= 0 && !wantsProject ? (DEMOS[selectedDemo].css ?? "") : "";
 let activeDocument = "pug";
 let diagram = null;
 let currentGraph = null;
 let selections = [];
+
+async function loadProjectIfRequested() {
+  if (!wantsProject) return;
+  try {
+    const [pug, css] = await Promise.all([
+      fetch("/__project.pug").then((response) => (response.ok ? response.text() : "")),
+      fetch("/__project.css").then((response) => (response.ok ? response.text() : "")),
+    ]);
+    pugSource = pug;
+    cssSource = css;
+  } catch { /* no project served — fall through to blank */ }
+}
 let canvasZoomPercent = 100;
 const canvasUndo = [];
 const canvasRedo = [];
@@ -214,7 +229,7 @@ function persistWorkspace() {
 }
 
 function restoreWorkspace() {
-  if (selectedDemo >= 0) return;
+  if (selectedDemo >= 0 || wantsProject) return;
   try {
     const saved = JSON.parse(sessionStorage.getItem("pug-sankey-workspace") ?? "null");
     if (saved && typeof saved.pugSource === "string") {
@@ -609,6 +624,12 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
 });
 
 attachVimMode(source, $("#vim-mode"), $("#vim-status"));
+// Honor `pug-sankey --vim` by enabling Vim mode on launch.
+if (launchParams.get("vim") === "1") {
+  const vimToggle = $("#vim-mode");
+  vimToggle.checked = true;
+  vimToggle.dispatchEvent(new Event("change"));
+}
 
 // ---- keyboard -----------------------------------------------------------------
 
@@ -651,6 +672,10 @@ $("#add-flow").addEventListener("click", () => openBuilder("flow"));
 $("#add-diagram")?.addEventListener("click", () => openBuilder("node"));
 $("#add-image")?.addEventListener("click", () => openBuilder("node"));
 
-restoreWorkspace();
-switchDocument(activeDocument);
-update();
+async function boot() {
+  await loadProjectIfRequested();
+  restoreWorkspace();
+  switchDocument(activeDocument);
+  update();
+}
+boot();
