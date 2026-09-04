@@ -9,7 +9,7 @@ function selectionOffset(element, node, offset) {
   }
 }
 
-function textPosition(element, requestedOffset) {
+export function textPosition(element, requestedOffset) {
   const offset = Math.max(0, requestedOffset);
   const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let traversed = 0;

@@ -18,6 +18,7 @@ import {
 } from "./editor-source.mjs";
 import { attachVimMode } from "./vim-mode.mjs";
 import { attachTextEditor } from "./text-editor.mjs";
+import { applyHighlights } from "./syntax-highlight.mjs";
 import { ADDITIONAL_DEMOS } from "./demo-sources.mjs";
 
 // ---- demo library ----------------------------------------------------------
@@ -140,6 +141,7 @@ function setActiveValue(value) { if (activeDocument === "css") cssSource = value
 
 function updateEditorChrome() {
   const value = source.value;
+  applyHighlights(source, value);
   const total = value ? value.split("\n").length : 1;
   const caretLine = value.slice(0, source.selectionStart).split("\n").length;
   lineNumbers.replaceChildren(...Array.from({ length: total }, (_, i) => {
@@ -189,6 +191,7 @@ function switchDocument(name) {
 // ---- render ----------------------------------------------------------------
 
 function update() {
+  updateEditorChrome();
   persistWorkspace();
   const result = parseDiagram(pugSource, cssSource);
   if (result.errors.length) {
