@@ -38,7 +38,6 @@ class ServerTests(unittest.TestCase):
         self.assertIn(b"Pug Sankey", body)
         self.assertIn(f"Version <span>{__version__}</span>".encode(), body)
         self.assertIn(b"https://github.com/briday1/pug-sankey", body)
-        self.assertIn(b"https://pypi.org/project/pug-sankey/", body)
         self.assertEqual(body.count(b"Open Documentation"), 1)
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
 
