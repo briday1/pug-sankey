@@ -246,12 +246,20 @@ function addNode(svg, node, settings, colors) {
 
 function renderSvg(container, graph, options) {
   const colors = figureColors(container, graph.figure);
+  // Annotation modes and blend come from figure-level canvas settings. The
+  // parser emits booleans (with defaults applied); tolerate "show"/"hide"
+  // strings too for forward compatibility.
+  const flag = (value, fallback) => {
+    if (value === undefined || value === null || value === "") return fallback;
+    if (typeof value === "boolean") return value;
+    return String(value) !== "hide";
+  };
   const settings = {
-    nodeLabels: (graph.settings?.nodeLabels ?? "show") !== "hide",
-    nodeValues: (graph.settings?.nodeValues ?? "show") !== "hide",
-    flowLabels: (graph.settings?.flowLabels ?? "hide") === "show",
-    flowValues: (graph.settings?.flowValues ?? "show") !== "hide",
-    blend: Number.isFinite(Number(graph.settings?.blend)) ? Number(graph.settings.blend) : 60,
+    nodeLabels: flag(graph.figure?.nodeLabels, true),
+    nodeValues: flag(graph.figure?.nodeValues, true),
+    flowLabels: flag(graph.figure?.flowLabels, false),
+    flowValues: flag(graph.figure?.flowValues, true),
+    blend: Number.isFinite(Number(graph.figure?.blend)) ? Number(graph.figure.blend) : 60,
   };
 
   const layout = layoutDiagram(graph.nodes, graph.edges, { ...DEFAULT_LAYOUT, ...options.layout });

@@ -193,8 +193,11 @@ function annotationsFor(container, errors, annotationStyles, defaults = {}) {
     .filter((child) => ["position", "annotation", "annotation-group"].includes(child.type) || child.type === "field" && child.classes.includes("annotation"))
     .map((original) => {
       const positionMarker = original.type === "position" ? original : original.children.find((item) => item.type === "position");
+      const groupExtras = positionMarker && original !== positionMarker
+        ? original.children.filter((item) => item !== positionMarker && item.type !== "text")
+        : [];
       const child = positionMarker
-        ? { ...original, children: positionMarker.children, classes: positionMarker.classes, markerLineNumber: positionMarker.lineNumber }
+        ? { ...original, children: [...groupExtras, ...positionMarker.children], classes: positionMarker.classes, markerLineNumber: positionMarker.lineNumber }
         : original;
       if (Object.keys(child.attrs).length) errors.push(`Line ${child.lineNumber}: annotations do not accept inline attributes; use indented .color and .offset fields.`);
       const presetFields = child.children.filter((item) => annotationStyles.has(item.type));
@@ -379,13 +382,13 @@ function automaticId(label, usedIds) {
 }
 
 /** Read the .field children of a node/flow declaration into a plain attribute map. */
-function fieldsFor(container, errors, allowed, context, labelUsesTextLines = false) {
+function fieldsFor(container, errors, allowed, context, labelUsesTextLines = false, knownStyles = new Set()) {
   const attributes = {};
   const lines = {};
-  for (const child of container.children.filter((item) => item.type === "field" || (item.tag === null && allowed.has(item.type)))) {
+  for (const child of container.children.filter((item) => item.tag === null && !["text", "position", "annotation", "annotation-group"].includes(item.type))) {
     const property = child.type === "field" ? child.classes[0] : child.type;
     if (!allowed.has(property)) {
-      errors.push(`Line ${child.lineNumber}: unknown ${context} property "${property}".`);
+      if (!knownStyles.has(property)) errors.push(`Line ${child.lineNumber}: unknown ${context} property "${property}".`);
       continue;
     }
     if (Object.keys(child.attrs).length) errors.push(`Line ${child.lineNumber}: .${property} takes its value as text, not attributes.`);
@@ -444,7 +447,7 @@ function compileMarkup(tree) {
       errors.push(`Line ${container.lineNumber}: node declarations do not accept inline attributes; use indented fields.`);
     }
     if (container.text) errors.push(`Line ${container.lineNumber}: node declarations take indented fields, not inline text.`);
-    const attributes = fieldsFor(container, errors, NODE_PROPERTIES, "node", true);
+    const attributes = fieldsFor(container, errors, NODE_PROPERTIES, "node", true, knownStyles);
     const label = attributes.label === true ? "" : attributes.label ?? "";
     const presetChildren = container.children.filter((child) => nodeStyles.has(child.type));
     if (presetChildren.length > 1) errors.push(`Line ${presetChildren[1].lineNumber}: only one reusable node class may be applied here.`);
@@ -489,7 +492,7 @@ function compileMarkup(tree) {
     if (Object.keys(container.attrs).length) {
       errors.push(`Line ${container.lineNumber}: flow declarations do not accept inline attributes; use indented fields.`);
     }
-    const attributes = fieldsFor(container, errors, FLOW_PROPERTIES, "flow");
+    const attributes = fieldsFor(container, errors, FLOW_PROPERTIES, "flow", false, knownStyles);
     const presetChildren = container.children.filter((child) => flowStyles.has(child.type));
     if (presetChildren.length > 1) errors.push(`Line ${presetChildren[1].lineNumber}: only one reusable flow class may be applied here.`);
     const knownExtras = container.children.filter((child) => knownStyles.has(child.type) && !flowStyles.has(child.type));
