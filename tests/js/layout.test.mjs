@@ -194,3 +194,28 @@ flow
   assert.ok(offsets instanceof Map);
   assert.ok(offsets.has("a") && offsets.has("b"));
 });
+
+test("a declared node value sizes an isolated node with no flows", () => {
+  const layout = makeLayout(`node
+  .id a
+  .value 40
+`);
+  const node = layout.nodes.find((n) => n.id === "a");
+  assert.equal(node.value, 40);
+  assert.ok(node.height > 0);
+});
+
+test("a declared node value that agrees with its flows still sizes the bar", () => {
+  const layout = makeLayout(`node
+  .id a
+node
+  .id b
+  .value 15
+flow
+  .from a
+  .to b
+  .value 15
+`);
+  const node = layout.nodes.find((n) => n.id === "b");
+  assert.equal(node.value, 15);
+});

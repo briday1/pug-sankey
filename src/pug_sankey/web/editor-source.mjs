@@ -361,7 +361,6 @@ export function setNodeField(value, labelLineNumber, field, fieldValue) {
   return lines.join("\n");
 }
 
-
 export function setNodeGeometry(value, declarationLineNumber, width, height, offsetX, offsetY) {
   return setNodeField(value, declarationLineNumber, "offset", offsetTuple(offsetX, offsetY));
 }

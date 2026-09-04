@@ -8,7 +8,7 @@ const FONT_FIELDS = new Set([
   "font-family", "font-size", "font-weight", "font-style", "text-decoration", "text-outline", "text-outline-width",
 ]);
 const NODE_PROPERTIES = new Set([
-  "id", "label", "color", "layer", "hidden", "offset",
+  "id", "label", "value", "color", "layer", "hidden", "offset",
   ...FONT_FIELDS,
 ]);
 const FLOW_PROPERTIES = new Set(["id", "from", "to", "value", "color", "label", "hidden"]);
@@ -459,6 +459,16 @@ function compileMarkup(tree) {
     const layerText = attributes.layer === true ? "" : attributes.layer;
     const layer = layerText === undefined ? 0 : Number(layerText);
     if (layerText !== undefined && !Number.isInteger(layer)) errors.push(`Line ${attributes.__lines.layer ?? container.lineNumber}: node.layer must be an integer.`);
+    const valueText = attributes.value === true ? "" : attributes.value;
+    let declaredValue;
+    if (valueText !== undefined) {
+      const parsedValue = Number(valueText);
+      if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+        errors.push(`Line ${attributes.__lines.value ?? container.lineNumber}: node value must be a positive number.`);
+      } else {
+        declaredValue = parsedValue;
+      }
+    }
     const requestedId = attributes.id === true ? "" : attributes.id ?? "";
     if (requestedId && !ID_PATTERN.test(requestedId)) errors.push(`Line ${attributes.__lines.id ?? container.lineNumber}: "${requestedId}" is not a valid ID.`);
     const labelLineNumber = attributes.__lines.label ?? container.lineNumber;
@@ -473,6 +483,9 @@ function compileMarkup(tree) {
       label,
       color: (attributes.color === true ? null : attributes.color) ?? preset?.style.color ?? nodeDefaults.color ?? null,
       layer: Number.isInteger(layer) ? layer : 0,
+      declaredValue,
+      hasDeclaredValue: declaredValue !== undefined,
+      declaredValueLineNumber: attributes.__lines.value ?? labelLineNumber,
       hidden: truthy(attributes.hidden),
       lineNumber: labelLineNumber,
       sourceIndex: nodes.length,
@@ -564,6 +577,30 @@ function compileMarkup(tree) {
       style,
     });
   }
+
+  // A node's value is authoritative when declared explicitly. Flows still
+  // drive the diagram's topology and ribbon thickness, but when a node also
+  // states its own .value it must agree with what its flows add up to —
+  // otherwise the source is inconsistent and we surface a clear error rather
+  // than silently picking one number over the other.
+  const outgoingTotal = new Map();
+  const incomingTotal = new Map();
+  edges.forEach((edge) => {
+    outgoingTotal.set(edge.from, (outgoingTotal.get(edge.from) ?? 0) + edge.value);
+    incomingTotal.set(edge.to, (incomingTotal.get(edge.to) ?? 0) + edge.value);
+  });
+  nodes.forEach((node) => {
+    if (!node.hasDeclaredValue) return;
+    const flowTotal = Math.max(outgoingTotal.get(node.id) ?? 0, incomingTotal.get(node.id) ?? 0);
+    if (flowTotal <= 0) return;
+    const tolerance = Math.max(1e-9, flowTotal * 1e-6);
+    if (Math.abs(node.declaredValue - flowTotal) > tolerance) {
+      errors.push(
+        `Line ${node.declaredValueLineNumber}: node "${node.id}" value (${node.declaredValue}) does not match its flow total (${flowTotal}); update the node value or its flows to match.`,
+      );
+    }
+  });
+
   return { nodes, edges, groups, errors, format: "pug", figure, ...styleBaselines() };
 }
 
