@@ -11,6 +11,7 @@ import {
   appendFlowReference,
   appendNodeAnnotation,
   indentSourceSelection,
+  removeNodeField,
   renameNodeReferences,
   setNodeField,
   setNodeOffsetField,
@@ -277,7 +278,7 @@ function renderLayersPanel() {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "graph-item";
-    item.innerHTML = `<strong>${escapeHtml(node.label || node.id)}</strong><small>${escapeHtml(node.id)} · value ${escapeHtml(node.value ?? "")}</small>`;
+    item.innerHTML = `<strong>${escapeHtml(node.label || node.id)}</strong><small>${escapeHtml(node.id)} · value ${escapeHtml(node.hasDeclaredValue ? node.declaredValue : "auto")}</small>`;
     item.addEventListener("click", () => { selections = [{ kind: "node", id: node.id, selectionKey: node.id, lineNumber: node.lineNumber }]; paintSelections(); renderInspector(); selectSourceLine({ lineNumber: node.lineNumber }); });
     return item;
   }));
@@ -319,6 +320,7 @@ function renderNodeInspector(node) {
   inspectorContent.innerHTML = `<h3>Node</h3>`
     + field("ID", `<input data-node-field="id" value="${escapeHtml(node.explicitId ?? node.id)}" pattern="[A-Za-z][A-Za-z0-9_-]*">`)
     + field("Label", `<input data-node-field="label" value="${escapeHtml(node.label ?? "")}">`)
+    + field("Value", `<input data-node-field="value" type="number" min="0" step="any" value="${escapeHtml(node.hasDeclaredValue ? node.declaredValue : "")}" placeholder="auto (from flows)">`)
     + field("Color", `<input data-node-field="color" value="${escapeHtml(node.color ?? "")}" placeholder="#2e6ba7">`)
     + field("Layer", `<input data-node-field="layer" type="number" value="${escapeHtml(node.layer ?? 0)}">`)
     + `<label class="inspector-switch"><span>Hidden</span><input data-node-field="hidden" type="checkbox" ${node.hidden ? "checked" : ""}></label>`
@@ -339,6 +341,8 @@ function applyNodeField(node, name, input) {
     if (next && next !== node.id && /^[A-Za-z][A-Za-z0-9_-]*$/.test(next)) pugSource = renameNodeReferences(pugSource, node.id, next);
   } else if (name === "hidden") {
     pugSource = setNodeField(pugSource, node.lineNumber, "hidden", input.checked ? "" : undefined);
+  } else if (name === "value" && input.value.trim() === "") {
+    pugSource = removeNodeField(pugSource, node.lineNumber, "value");
   } else {
     pugSource = setNodeField(pugSource, node.lineNumber, name, value ?? "");
   }

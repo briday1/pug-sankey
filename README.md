@@ -6,11 +6,11 @@ A source-first **Sankey diagram** editor and command-line renderer. Diagrams sta
 
 ## What it does
 
-- **Value-driven sizing** — the `.value` on each `flow` determines both the ribbon thickness and the height of the node bars it connects.
+- **Value-driven sizing** — the `.value` on each `flow` determines both the ribbon thickness and the height of the node bars it connects. A node may also declare its own `.value`; when present it becomes the authoritative size of the bar (useful for isolated nodes with no flows yet), and the source is validated to make sure it agrees with the node's flow totals.
 - **Per-flow color, blended** — give any `flow` a `.color`, or leave it unset and the ribbon blends from its source node's color toward its target node's color (controlled by `.blend`).
 - **Arbitrary branching and merging** — a node may feed many nodes and be fed by many nodes; the layout stacks and reconfigures columns automatically.
 - **Annotation options** — toggle node labels, node values, flow labels, and flow values independently.
-- **Source, canvas, or both** — work entirely in the text editor, entirely on the canvas, or side by side. The source is the single editable representation; the canvas is a live preview that can click-to-select source lines, drag to nudge, and build new nodes/flows.
+- **Source, canvas, or both** — work entirely in the text editor, entirely on the canvas, or side by side. The source is the single editable representation; the canvas is a live preview that can click-to-select source lines, drag to nudge, and build new nodes/flows. The source editor syntax-highlights keywords, fields, colors, numbers, and comments.
 - **Command line** — render `.pug` files to PNG/SVG headlessly.
 
 ## Install as a Python application

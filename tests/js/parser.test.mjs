@@ -215,3 +215,51 @@ test("graph keyword is rejected with a helpful error", () => {
 `);
   assert.ok(graph.errors.length > 0);
 });
+
+test("a node may declare its own .value, used when it agrees with its flows", () => {
+  const graph = parseDiagram(`node
+  .id a
+node
+  .id b
+  .value 10
+flow
+  .from a
+  .to b
+  .value 10
+`);
+  assert.equal(graph.errors.length, 0);
+  const b = graph.nodes.find((node) => node.id === "b");
+  assert.equal(b.declaredValue, 10);
+  assert.equal(b.hasDeclaredValue, true);
+});
+
+test("a node value that conflicts with its flow total is a clear error", () => {
+  const graph = parseDiagram(`node
+  .id a
+node
+  .id b
+  .value 99
+flow
+  .from a
+  .to b
+  .value 10
+`);
+  assert.ok(graph.errors.some((error) => /value.*does not match/i.test(error)));
+});
+
+test("a node value is required to be a positive number", () => {
+  const graph = parseDiagram(`node
+  .id a
+  .value -5
+`);
+  assert.ok(graph.errors.some((error) => /node value must be a positive number/i.test(error)));
+});
+
+test("an isolated node may declare its own value with no flows at all", () => {
+  const graph = parseDiagram(`node
+  .id a
+  .value 25
+`);
+  assert.equal(graph.errors.length, 0);
+  assert.equal(graph.nodes[0].declaredValue, 25);
+});

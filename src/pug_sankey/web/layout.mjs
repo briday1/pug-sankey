@@ -44,10 +44,17 @@ function analyze(nodes, edges) {
     outgoing.get(edge.from).push(edge);
     incoming.get(edge.to).push(edge);
   });
-  const throughput = new Map(nodes.map((node) => [node.id, Math.max(
-    outgoing.get(node.id).reduce((sum, edge) => sum + edge.value, 0),
-    incoming.get(node.id).reduce((sum, edge) => sum + edge.value, 0),
-  )]));
+  const throughput = new Map(nodes.map((node) => {
+    const computed = Math.max(
+      outgoing.get(node.id).reduce((sum, edge) => sum + edge.value, 0),
+      incoming.get(node.id).reduce((sum, edge) => sum + edge.value, 0),
+    );
+    // A node's own declared .value is authoritative when present (the parser
+    // already rejects sources where it conflicts with the flow totals), so
+    // isolated or under-connected nodes still render at their intended size.
+    const value = node.hasDeclaredValue ? node.declaredValue : computed;
+    return [node.id, value];
+  }));
   return { nodesById, outgoing, incoming, liveEdges, throughput };
 }
 
