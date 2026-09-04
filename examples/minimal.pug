@@ -1,0 +1,21 @@
+// Minimal Sankey — the smallest useful diagram.
+// Two flows branch from one source into two targets;
+// the .value fields size both the ribbons and the node bars.
+
+node
+  .id input
+  .label Input
+node
+  .id alpha
+  .label Alpha
+node
+  .id beta
+  .label Beta
+flow
+  .from input
+  .to alpha
+  .value 60
+flow
+  .from input
+  .to beta
+  .value 40

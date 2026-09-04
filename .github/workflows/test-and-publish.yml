@@ -1,0 +1,200 @@
+name: Test and publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test
+    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Test JavaScript
+        run: |
+          node --check src/pug_sankey/web/app.mjs
+          node --check src/pug_sankey/web/parser.mjs
+          node --check src/pug_sankey/web/pugflow.mjs
+          node --test tests/js/*.test.mjs
+      - name: Test Python
+        run: PYTHONPATH=src python -m unittest discover -s tests/python -v
+
+  pages:
+    name: Deploy to GitHub Pages
+    needs: [test, pypi]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Use published PyPI version
+        env:
+          VERSION: ${{ needs.pypi.outputs.version }}
+        run: |
+          python <<'PYTHON_EOF'
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path("src/pug_sankey/web/index.html")
+          source = path.read_text()
+          updated, count = re.subn(
+              r'Version <span>[^<]+</span>',
+              f'Version <span>{os.environ["VERSION"]}</span>',
+              source,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f"Could not update version in {path}")
+          path.write_text(updated)
+          PYTHON_EOF
+      - name: Cache-bust browser assets
+        env:
+          ASSET_VERSION: ${{ github.sha }}
+        run: |
+          python <<'PYTHON_EOF'
+          import os
+          import re
+          from pathlib import Path
+
+          web = Path("src/pug_sankey/web")
+          version = os.environ["ASSET_VERSION"]
+          patterns = {
+              ".html": re.compile(r'(?P<prefix>(?:href=|import\()["\'])(?P<path>(?:\./)?[^"\'?]+\.(?:css|mjs))'),
+              ".mjs": re.compile(r'(?P<prefix>(?:from\s+|import\()["\'])(?P<path>(?:\./)?[^"\'?]+\.mjs)'),
+          }
+          for path in [*web.glob("*.html"), *web.glob("*.mjs")]:
+              source = path.read_text()
+              path.write_text(patterns[path.suffix].sub(
+                  lambda match: f'{match["prefix"]}{match["path"]}?v={version}',
+                  source,
+              ))
+          PYTHON_EOF
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: src/pug_sankey/web
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  pypi:
+    name: Version, build, and publish to PyPI
+    needs: test
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Generate version from PyPI
+        id: set-version
+        run: |
+          NEXT_VERSION=$(python <<'PYTHON_EOF'
+          import json
+          import re
+          import sys
+          import urllib.error
+          import urllib.request
+          from datetime import datetime, timezone
+
+          package_name = "pug-sankey"
+          year = datetime.now(timezone.utc).year
+          year_pattern = re.compile(rf"^{year}\.(\d+)$")
+          releases = []
+
+          try:
+              request = urllib.request.Request(
+                  f"https://pypi.org/pypi/{package_name}/json",
+                  headers={"User-Agent": f"{package_name}-publish-workflow/1.0"},
+              )
+              with urllib.request.urlopen(request, timeout=10) as response:
+                  releases = json.loads(response.read()).get("releases", {})
+          except urllib.error.HTTPError as error:
+              if error.code != 404:
+                  raise
+              print(f"{package_name} is not on PyPI yet; starting a new version series.", file=sys.stderr)
+
+          numbers = [int(match.group(1)) for version in releases if (match := year_pattern.match(version))]
+          print(f"{year}.{max(numbers, default=0) + 1}")
+          PYTHON_EOF
+          )
+          echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "Generated version: $NEXT_VERSION"
+
+      - name: Update package version
+        env:
+          VERSION: ${{ steps.set-version.outputs.version }}
+        run: |
+          python <<'PYTHON_EOF'
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["VERSION"]
+          replacements = {
+              Path("pyproject.toml"): (r'(?m)^version = "[^"]+"$', f'version = "{version}"'),
+              Path("src/pug_sankey/__init__.py"): (r'(?m)^__version__ = "[^"]+"$', f'__version__ = "{version}"'),
+              Path("src/pug_sankey/web/index.html"): (r'Version <span>[^<]+</span>', f'Version <span>{version}</span>'),
+          }
+          for path, (pattern, replacement) in replacements.items():
+              source = path.read_text()
+              updated, count = re.subn(pattern, replacement, source, count=1)
+              if count != 1:
+                  raise SystemExit(f"Could not update version in {path}")
+              path.write_text(updated)
+          PYTHON_EOF
+
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+
+      - name: Build and check distribution
+        run: |
+          python -m build
+          python -m twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+      - name: Commit version and tag release
+        env:
+          VERSION: ${{ steps.set-version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml src/pug_sankey/__init__.py src/pug_sankey/web/index.html
+          git commit -m "chore: bump version to $VERSION [skip ci]"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin main "v$VERSION"

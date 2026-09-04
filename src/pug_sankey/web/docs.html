@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Complete offline Pug Sankey documentation"><link rel="icon" href="data:,"><link rel="stylesheet" href="docs.css"><title>Pug Sankey documentation</title></head>
+<body><div class="layout">
+<nav><strong>Pug Sankey docs</strong><a href="#start">Getting started</a><a href="#nodes">Nodes</a><a href="#flows">Flows</a><a href="#colors">Colors and blending</a><a href="#labels">Labels and values</a><a href="#styles">Reusable styles</a><a href="#canvas-ui">Canvas editing</a><a href="#editor">Editor modes</a><a href="#export">Export and CLI</a><a href="#reference">Property reference</a></nav>
+<main>
+<h1>Pug Sankey</h1><p class="lede">Complete offline reference for building, styling, editing, and exporting source-first Sankey diagrams.</p>
+
+<h2 id="start">Getting started</h2><p>A Sankey diagram is a plain <code>.pug</code> file. Nodes are the vertical bars; flows are the ribbons between them. The value on each flow sets the ribbon thickness, and each node bar grows to match the total throughput passing through it. The smallest diagram is two nodes and one flow:</p>
+<pre><code>node
+  .id source
+  .label Source
+node
+  .id target
+  .label Target
+flow
+  .from source
+  .to target
+  .value 10</code></pre>
+<p>This renders two bars, <strong>Source</strong> on the left and <strong>Target</strong> on the right, joined by a ribbon 10 units thick. Indentation defines ownership; use two spaces consistently. Blank lines and lines beginning with <code>//</code> are ignored. Save the Pug source to keep the diagram editable; PNG and SVG are export formats. Everything can be done entirely in the source editor, entirely on the canvas, or both.</p>
+
+<h2 id="nodes">Nodes</h2><p>Every node starts with bare <code>node</code>; keep its fields dotted beneath the declaration. Nodes are laid out into columns automatically from the flow direction — a node with no incoming flows sits on the left, and each flow moves its target one column to the right.</p>
+<pre><code>node
+  .id industry
+  .label Industry
+  .color #64748b
+  .layer 1
+  .offset (0, 24)
+  .annotation
+    .above
+      | Largest single consumer
+      | Updated for 2026
+  .annotation
+    .below
+      | Includes construction</code></pre>
+<ul><li><code>.id</code> — unique identifier used as a flow endpoint. Required for any node a flow touches.</li><li><code>.label</code> — text shown beside or on the bar.</li><li><code>.color</code> — bar color; ribbons also blend from and to it (see Colors and blending).</li><li><code>.layer</code> — stacking order when bars overlap; higher layers render in front.</li><li><code>.hidden</code> — removes the bar and every touching flow from the render while keeping the source in place.</li><li><code>.offset (x, y)</code> — manual nudge in pixels. Written automatically when you drag a bar on the canvas.</li><li><code>.annotation</code> — free text attached to the node. Nest <code>.above</code> or <code>.below</code> for the starting position, then indent <code>|</code> text lines beneath it. Annotations may be dragged to write their own <code>.offset</code>.</li></ul>
+
+<h2 id="flows">Flows</h2><p>Every flow explicitly identifies its source and target node by ID, plus a value. <code>.value</code> is required and must be a positive number — it determines the ribbon thickness. An optional <code>.color</code> pins the ribbon color and <code>.label</code> places text on the ribbon.</p>
+<pre><code>flow
+  .from coal
+  .to electricity
+  .value 28
+flow
+  .from coal
+  .to heat
+  .value 8
+flow
+  .from renewables
+  .to electricity
+  .value 30
+  .color #16a34a
+  .label Wind and solar</code></pre>
+<p>Multiple flows out of one node render as a branch; multiple flows into one node render as a merge. Branching and merging are arbitrary — no separate keyword is needed. Node bar heights always follow throughput: a bar is exactly as tall as the sum of the flows entering or leaving it, so merges and splits stay visually balanced.</p>
+
+<h2 id="colors">Colors and blending</h2><p>Each node takes its own bar color with <code>.color</code>. Each flow may also take an explicit <code>.color</code>, which paints the whole ribbon in that single color.</p>
+<p>Flows without an explicit color blend automatically between their endpoint colors: the ribbon starts at its source node color and finishes at its target node color. The canvas setting <code>.blend N</code> (0–100) controls how far the color travels across the ribbon — <code>0</code> keeps the source color until the very end, <code>100</code> shifts fully to the target color, and the default <code>60</code> eases most of the way across.</p>
+<pre><code>.background #ffffff
+.blend 60
+
+node
+  .id renewables
+  .label Renewables
+  .color #22c55e
+node
+  .id electricity
+  .label Electricity
+  .color #2563eb
+flow
+  .from renewables
+  .to electricity
+  .value 30</code></pre>
+
+<h2 id="labels">Labels and values</h2><p>Four canvas settings toggle text independently. Each accepts <code>show</code> or <code>hide</code>:</p>
+<pre><code>.node-labels show
+.node-values show
+.flow-labels show
+.flow-values show</code></pre>
+<ul><li><code>.node-labels</code> — the text label on each node bar.</li><li><code>.node-values</code> — the total throughput value shown with each node.</li><li><code>.flow-labels</code> — the text labels placed on ribbons via <code>.label</code> (hidden by default).</li><li><code>.flow-values</code> — the numeric value shown on each ribbon.</li></ul>
+<p>Node annotations (see Nodes) are separate from these settings and are always shown unless individually hidden.</p>
+
+<h2 id="styles">Reusable styles</h2><p>Reusable definitions may be written at the source root in Pug or in the optional CSS tab. CSS uses Pug Sankey at-rules rather than browser selectors:</p>
+<pre><code>@node source {
+  color: #57534e;
+}
+
+@flow highlight {
+  color: #dc2626;
+  label: Featured;
+}
+
+@annotation note {
+  color: #2563eb;
+  font-style: italic;
+}</code></pre>
+<p>Apply a reusable type by nesting <code>.name</code> inside a bare declaration — <code>.source</code> inside <code>node</code>, <code>.highlight</code> inside <code>flow</code>, and <code>.note</code> inside an annotation. Local fields beneath an item override its reusable type.</p>
+<pre><code>node
+  .source
+  .id coal
+  .label Coal
+flow
+  .highlight
+  .from coal
+  .to electricity
+  .value 28</code></pre>
+
+<h2 id="canvas-ui">Canvas editing</h2><ul><li>Click a node bar, ribbon, or label to select it and jump to its source line.</li><li>Drag a bar, ribbon label, or annotation to nudge it; the new position is written back to the source as an <code>.offset</code>.</li><li>The inspector edits node fields (label, color, layer, hidden, annotations) and flow fields (from, to, value, color, label) directly, keeping source and canvas in sync.</li><li><strong>Clean Up</strong> snaps offsets to a tidy layout, removing small accidental drags while preserving deliberate placement.</li><li>The right-side <strong>Objects</strong> panel lists every node and flow; click an entry to select it on the canvas and in the source.</li><li>Undo/Redo and Ctrl+Z/Ctrl+Y cover canvas and direct source edits, including edits that temporarily cause a parse error.</li><li>Zoom affects preview only; Fit frames the diagram. Exports use diagram bounds.</li></ul>
+
+<h2 id="editor">Editor modes</h2><p>The source panel is collapsible — <strong>Hide source</strong> folds it away for canvas-only work and remembers the preference. Separate <strong>Pug</strong> and <strong>CSS</strong> tabs keep diagram source and reusable styles apart; each tab shows the exact file being edited. A theme toggle switches between light and dark. Vim mode is off by default and supports Normal, Insert, and Visual modes, a block cursor, movement/edit/yank/paste/marks, and Escape/Ctrl+[ to return to Normal mode; enable it in the editor or with <code>--vim</code>.</p>
+
+<h2 id="export">Export and CLI</h2><p><strong>Copy</strong> writes a high-DPI PNG to the clipboard. <strong>Save</strong> exports PNG or SVG, with resolution options for PNG.</p>
+<pre><code>pug-sankey diagram.pug            # render diagram.pug to diagram.png
+pug-sankey diagram.pug -o out.png --scale 2
+pug-sankey --demo 3               # open the GUI with demo 3
+pug-sankey --gui diagram.pug      # open diagram.pug in the editor
+pug-sankey --vim --gui diagram.pug</code></pre>
+<p>Direct rendering uses an installed Edge, Chrome, or Chromium browser in headless mode.</p>
+
+<h2 id="reference">Property reference</h2>
+<table><thead><tr><th>Scope</th><th>Fields</th></tr></thead><tbody>
+<tr><td>Canvas</td><td><code>.background</code>, <code>.font</code>, <code>.node-labels</code>, <code>.node-values</code>, <code>.flow-labels</code>, <code>.flow-values</code>, <code>.blend</code></td></tr>
+<tr><td>Node</td><td><code>.id</code>, <code>.label</code>, <code>.color</code>, <code>.layer</code>, <code>.hidden</code>, <code>.offset</code>, repeated <code>.annotation</code> with <code>.above</code>/<code>.below</code></td></tr>
+<tr><td>Flow</td><td><code>.from</code>, <code>.to</code>, <code>.value</code> (required, positive), <code>.color</code>, <code>.label</code>, <code>.hidden</code></td></tr>
+<tr><td>Annotation</td><td><code>|</code> text lines, <code>.color</code>, <code>.offset</code>, <code>.hidden</code>, font options</td></tr>
+<tr><td>Reusable styles</td><td><code>@node</code>, <code>@flow</code>, <code>@annotation</code>, applied by nesting <code>.name</code> in a bare declaration</td></tr>
+</tbody></table>
+</main></div></body></html>
