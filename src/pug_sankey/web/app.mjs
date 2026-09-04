@@ -18,7 +18,6 @@ import {
 } from "./editor-source.mjs";
 import { attachVimMode } from "./vim-mode.mjs";
 import { attachTextEditor } from "./text-editor.mjs";
-import { cleanupAlignmentOffsets, cleanupGraphOffsets } from "./layout.mjs";
 import { ADDITIONAL_DEMOS } from "./demo-sources.mjs";
 
 // ---- demo library ----------------------------------------------------------
@@ -193,7 +192,6 @@ function update() {
     else diagram = createBlockDiagram(canvas, pugSource, {
       styles: cssSource,
       onNodeClick: selectSourceLine,
-      onElementMove: persistElementMove,
       onElementClick: selectCanvasElement,
     });
     applyCanvasZoom();
@@ -228,18 +226,6 @@ function restoreWorkspace() {
 }
 
 // ---- canvas interaction ----------------------------------------------------
-
-function persistElementMove(event) {
-  if (!event || !Number.isFinite(event.lineNumber)) return;
-  pushUndo();
-  if (event.kind === "node" || event.kind === "node-label" || event.kind === "block-annotation") {
-    pugSource = setNodeOffsetField(pugSource, event.lineNumber, "offset", event.dx, event.dy);
-  } else {
-    pugSource = setNodeOffsetField(pugSource, event.lineNumber, "label-offset", event.dx, event.dy);
-  }
-  if (activeDocument === "pug") source.value = pugSource;
-  update();
-}
 
 function selectCanvasElement(selection) {
   if (!selection.additive) selections = [selection];
@@ -399,7 +385,6 @@ function openBuilder(mode, contextNode = null) {
   builderSubmit.textContent = isFlow ? "Create flow" : "Create node";
   builder.querySelectorAll(".flow-only").forEach((el) => { el.style.display = isFlow ? "" : "none"; });
   builder.querySelectorAll(".new-target-only").forEach((el) => { el.style.display = isFlow ? "none" : ""; });
-  builder.querySelectorAll(".graph-only, .diagram-only, .relationship-only, .connected-node-only, .connected-source-choice, .existing-flow-only, .existing-target-only").forEach((el) => { el.style.display = "none"; });
   $("#builder-error").textContent = "";
   if (isFlow) {
     const options = (currentGraph?.nodes ?? []).map((node) => `<option value="${escapeHtml(node.id)}">${escapeHtml(node.label || node.id)}</option>`).join("");
@@ -413,20 +398,23 @@ function openBuilder(mode, contextNode = null) {
 $("#builder-cancel")?.addEventListener("click", () => builder.close());
 $("#graph-builder-form").addEventListener("submit", (event) => {
   event.preventDefault();
-  pushUndo();
   if (builderMode === "flow") {
     const from = $("#builder-from-id").value;
     const to = $("#builder-to-id").value;
     const value = Number($("#builder-value").value) || 10;
     const color = $("#builder-color").value.trim();
-    const label = $("#builder-label").value.trim();
+    const label = $("#builder-flow-label").value.trim();
     if (!from || !to) { $("#builder-error").textContent = "Choose both endpoints."; return; }
+    if (from === to) { $("#builder-error").textContent = "Choose two different endpoints."; return; }
+    pushUndo();
     pugSource = appendFlowReference(pugSource, 0, { from, to, value, color, label });
   } else {
     const id = $("#builder-id").value.trim();
     const label = $("#builder-label").value.trim();
     const color = $("#builder-color").value.trim();
     if (!id) { $("#builder-error").textContent = "Give the node an ID."; return; }
+    if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(id)) { $("#builder-error").textContent = "IDs start with a letter and use letters, numbers, underscores, or hyphens."; return; }
+    pushUndo();
     pugSource = appendDiagramNode(pugSource, { id, label, color });
   }
   builder.close();
@@ -458,22 +446,6 @@ function redoCanvas() {
 }
 $("#undo-canvas").addEventListener("click", undoCanvas);
 $("#redo-canvas").addEventListener("click", redoCanvas);
-
-// ---- clean up ---------------------------------------------------------------
-
-$("#cleanup-diagram").addEventListener("click", () => {
-  if (!diagram?.layout) return;
-  const nodeChanges = cleanupAlignmentOffsets(diagram.layout.nodes, diagram.layout.edges);
-  const graphChanges = cleanupGraphOffsets(diagram.layout.nodes, diagram.layout.edges, []);
-  if (!nodeChanges.length && !graphChanges.length) { showToast("Already tidy"); return; }
-  pushUndo();
-  [...nodeChanges].sort((a, b) => b.lineNumber - a.lineNumber).forEach((change) => {
-    pugSource = setNodeOffsetField(pugSource, change.lineNumber, "offset", change.offsetX, change.offsetY);
-  });
-  if (activeDocument === "pug") source.value = pugSource;
-  update();
-  showToast("Diagram cleaned up");
-});
 
 // ---- zoom / pan --------------------------------------------------------------
 

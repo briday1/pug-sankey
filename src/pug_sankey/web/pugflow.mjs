@@ -18,15 +18,6 @@ function svgElement(name, attributes = {}) {
   return element;
 }
 
-export function constrainDragDelta(dx, dy, constrained) {
-  if (!constrained) return { dx, dy };
-  return Math.abs(dx) >= Math.abs(dy) ? { dx, dy: 0 } : { dx: 0, dy };
-}
-
-export function constrainResizeDelta(dx, dy, resizeX, resizeY) {
-  return { dx: resizeX ? dx : 0, dy: resizeY ? dy : 0 };
-}
-
 function cssVariables(element) {
   const styles = getComputedStyle(element);
   const read = (name, fallback) => styles.getPropertyValue(name).trim() || fallback;
@@ -159,7 +150,7 @@ function addLink(svg, defs, edge, nodesById, palette, settings, colors, index) {
     opacity: 0.55,
     class: "sankey-ribbon",
     "data-line": edge.labelLineNumber ?? edge.lineNumber,
-    "data-drag-kind": "line",
+
   }));
   svg.append(group);
 
@@ -175,7 +166,7 @@ function addLink(svg, defs, edge, nodesById, palette, settings, colors, index) {
     const text = svgElement("text", {
       x: cx, y: cy - 4, class: "connection-annotation sankey-flow-label",
       "text-anchor": "middle", "data-line": edge.labelLineNumber ?? edge.lineNumber,
-      "data-drag-kind": "connection-label", "data-from": edge.from, "data-to": edge.to,
+      "data-from": edge.from, "data-to": edge.to,
       "data-selection-key": `${edge.from}|${edge.to}|${edge.lineNumber}`,
     });
     text.setAttribute("style", `font: 600 11px ${colors.font}; fill: ${colors.annotation}; paint-order: stroke; stroke: ${colors.background}; stroke-width: 3px;`);
@@ -191,7 +182,7 @@ function addNode(svg, node, settings, colors) {
   });
   group.append(svgElement("rect", {
     class: "label-box", x: node.x, y: node.y, width: node.width, height: node.height,
-    rx: 2, fill: node._sankeyColor, "data-line": node.lineNumber, "data-drag-kind": "node", "data-id": node.id,
+    rx: 2, fill: node._sankeyColor, "data-line": node.lineNumber, "data-id": node.id,
   }));
 
   // Node label + value to the side of the bar.
@@ -201,7 +192,7 @@ function addNode(svg, node, settings, colors) {
   if (settings.nodeValues) lines.push(formatValue(node.value));
   if (lines.length) {
     const text = svgElement("text", {
-      class: "label sankey-node-label", "data-line": node.lineNumber, "data-drag-kind": "node-label",
+      class: "label sankey-node-label", "data-line": node.lineNumber,
       "data-id": node.id, "data-selection-key": node.id,
     });
     text.setAttribute("style", `font: 600 12px ${colors.font}; fill: ${colors.text}; paint-order: stroke; stroke: ${colors.background}; stroke-width: 3px;`);
@@ -229,7 +220,7 @@ function addNode(svg, node, settings, colors) {
     const ay = (above ? node.y - 8 - index * 14 : node.y + node.height + 16 + index * 14) + (annotation.offsetY ?? 0);
     const text = svgElement("text", {
       x: ax, y: ay, class: "block-annotation", "text-anchor": "middle",
-      "data-line": annotation.lineNumber, "data-drag-kind": "block-annotation", "data-id": node.id,
+      "data-line": annotation.lineNumber, "data-id": node.id,
       "data-select-kind": "annotation",
     });
     text.setAttribute("style", `font: ${annotation.fontStyle ?? "normal"} ${annotation.fontWeight ?? "normal"} ${annotation.fontSize ?? 11}px ${annotation.fontFamily ?? colors.font}; fill: ${annotation.color ?? colors.annotation};`);
@@ -295,12 +286,9 @@ function renderSvg(container, graph, options) {
     .diagram-background { fill: ${colors.background}; }
     .label, .block-annotation, .connection-annotation { user-select: none; }
     .interactive [data-line] { cursor: pointer; }
-    .interactive [data-drag-kind] { touch-action: none; }
     .interactive .sankey-node:hover .label-box { filter: brightness(1.08); }
     .interactive text[data-line]:hover, .interactive text[data-line]:focus { text-decoration: underline; }
     .interactive .sankey-ribbon:hover { opacity: .8; }
-    .interactive .dragging { opacity: .82; }
-    .interactive .drag-origin { opacity: .24; pointer-events: none; }
   `;
   svg.append(style);
   const defs = svgElement("defs");
@@ -328,117 +316,52 @@ export function edgeIsVisible(edge, nodesById) {
 }
 
 function attachInteraction(svg, options) {
-  if (!options.onNodeClick && !options.onElementMove) return;
+  // The canvas is click-to-select and inspector-edited, but elements are not
+  // draggable — the Sankey layout always owns element positions.
+  if (!options.onNodeClick && !options.onElementClick) return;
   svg.classList.add("interactive");
-  let drag = null;
   let navigationPointer = null;
-  const pointFor = (event) => {
-    const point = svg.createSVGPoint();
-    point.x = event.clientX;
-    point.y = event.clientY;
-    return point.matrixTransform(svg.getScreenCTM().inverse());
+  svg.addEventListener("pointerdown", (event) => {
+    const target = event.target.closest?.("[data-line]");
+    if (!target || event.button !== 0) return;
+    navigationPointer = { pointerId: event.pointerId, target, clientX: event.clientX, clientY: event.clientY, moved: false };
+  });
+  svg.addEventListener("pointermove", (event) => {
+    if (!navigationPointer || navigationPointer.pointerId !== event.pointerId) return;
+    if (Math.hypot(event.clientX - navigationPointer.clientX, event.clientY - navigationPointer.clientY) > 2) navigationPointer.moved = true;
+  });
+  svg.addEventListener("pointerup", (event) => {
+    if (!navigationPointer || navigationPointer.pointerId !== event.pointerId) return;
+    const completed = navigationPointer;
+    navigationPointer = null;
+    if (completed.moved) return;
+    const entry = completed.target.closest?.(".entry");
+    const connector = completed.target.closest?.(".connector");
+    const additive = event.shiftKey || event.ctrlKey || event.metaKey;
+    const selectedTarget = completed.target.closest?.("[data-select-kind]") ?? completed.target;
+    const kind = selectedTarget.dataset.selectKind ?? (connector ? "line" : "node");
+    options.onElementClick?.({
+      kind,
+      id: entry?.dataset.id ?? selectedTarget.dataset.id ?? null,
+      from: connector?.dataset.from ?? selectedTarget.dataset.from ?? null,
+      to: connector?.dataset.to ?? selectedTarget.dataset.to ?? null,
+      lineNumber: Number(kind === "line" ? selectedTarget.dataset.offsetLine ?? selectedTarget.dataset.line : selectedTarget.dataset.line ?? completed.target.dataset.line),
+      offsetLineNumber: Number(selectedTarget.dataset.offsetLine ?? selectedTarget.dataset.line),
+      selectionKey: selectedTarget.dataset.selectionKey ?? connector?.dataset.selectionKey ?? entry?.dataset.selectionKey ?? null,
+      additive,
+    });
+    if (!additive) options.onNodeClick?.({ id: completed.target.dataset.id ?? null, lineNumber: Number(completed.target.dataset.line) });
+  });
+  svg.addEventListener("pointercancel", (event) => {
+    if (navigationPointer?.pointerId === event.pointerId) navigationPointer = null;
+  });
+  const activateNode = (event) => {
+    const target = event.target.closest?.("[data-line]");
+    if (!target || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    options.onNodeClick?.({ id: target.dataset.id ?? null, lineNumber: Number(target.dataset.line) });
   };
-  if (options.onNodeClick) {
-    svg.addEventListener("pointerdown", (event) => {
-      const target = event.target.closest?.("[data-line]");
-      if (!target || event.button !== 0) return;
-      navigationPointer = { pointerId: event.pointerId, target, clientX: event.clientX, clientY: event.clientY, moved: false };
-    });
-    svg.addEventListener("pointermove", (event) => {
-      if (!navigationPointer || navigationPointer.pointerId !== event.pointerId) return;
-      if (Math.hypot(event.clientX - navigationPointer.clientX, event.clientY - navigationPointer.clientY) > 2) navigationPointer.moved = true;
-    });
-    svg.addEventListener("pointerup", (event) => {
-      if (!navigationPointer || navigationPointer.pointerId !== event.pointerId) return;
-      const completed = navigationPointer;
-      navigationPointer = null;
-      if (completed.moved) return;
-      const entry = completed.target.closest?.(".entry");
-      const connector = completed.target.closest?.(".connector");
-      const additive = event.shiftKey || event.ctrlKey || event.metaKey;
-      const selectedTarget = completed.target.closest?.("[data-select-kind]") ?? completed.target;
-      const kind = selectedTarget.dataset.selectKind ?? (connector ? "line" : "node");
-      options.onElementClick?.({
-        kind,
-        id: entry?.dataset.id ?? selectedTarget.dataset.id ?? null,
-        from: connector?.dataset.from ?? selectedTarget.dataset.from ?? null,
-        to: connector?.dataset.to ?? selectedTarget.dataset.to ?? null,
-        lineNumber: Number(kind === "line" ? selectedTarget.dataset.offsetLine ?? selectedTarget.dataset.line : selectedTarget.dataset.line ?? completed.target.dataset.line),
-        offsetLineNumber: Number(selectedTarget.dataset.offsetLine ?? selectedTarget.dataset.line),
-        selectionKey: selectedTarget.dataset.selectionKey ?? connector?.dataset.selectionKey ?? entry?.dataset.selectionKey ?? null,
-        additive,
-      });
-      if (!additive) options.onNodeClick({ id: completed.target.dataset.id ?? null, lineNumber: Number(completed.target.dataset.line) });
-    });
-    svg.addEventListener("pointercancel", (event) => {
-      if (navigationPointer?.pointerId === event.pointerId) navigationPointer = null;
-    });
-  }
-  if (options.onElementMove) {
-    svg.addEventListener("pointerdown", (event) => {
-      const target = event.target.closest?.("[data-drag-kind]");
-      if (!target || event.button !== 0) return;
-      event.preventDefault();
-      const start = pointFor(event);
-      const element = target.dataset.dragKind === "node" ? target.closest(".entry") : target;
-      const ghost = element.cloneNode(true);
-      ghost.classList.remove("dragging", "selected-element");
-      ghost.classList.add("drag-origin");
-      for (const item of [ghost, ...ghost.querySelectorAll("[data-line], [tabindex], [data-drag-kind]")]) {
-        item.removeAttribute("data-line");
-        item.removeAttribute("data-drag-kind");
-        item.removeAttribute("tabindex");
-        item.removeAttribute("role");
-      }
-      element.parentNode.insertBefore(ghost, element);
-      drag = { pointerId: event.pointerId, target, element, ghost, start, dx: 0, dy: 0 };
-      element.classList.add("dragging");
-      svg.setPointerCapture(event.pointerId);
-    });
-    svg.addEventListener("pointermove", (event) => {
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      const point = pointFor(event);
-      const { dx, dy } = constrainDragDelta(point.x - drag.start.x, point.y - drag.start.y, event.metaKey || event.ctrlKey || event.shiftKey);
-      drag.dx = dx;
-      drag.dy = dy;
-      drag.element.setAttribute("transform", `translate(${dx} ${dy})`);
-    });
-    const finishDrag = (event) => {
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      const completed = drag;
-      drag = null;
-      completed.element.removeAttribute("transform");
-      completed.element.classList.remove("dragging");
-      completed.ghost.remove();
-      if (Math.hypot(completed.dx, completed.dy) > 2) {
-        options.onElementMove({
-          kind: completed.target.dataset.dragKind,
-          selectionKey: null,
-          id: completed.target.dataset.id ?? null,
-          lineNumber: Number(completed.target.dataset.offsetLine ?? completed.target.dataset.line),
-          currentX: Number(completed.target.dataset.currentX ?? 0),
-          currentY: Number(completed.target.dataset.currentY ?? 0),
-          dx: completed.dx,
-          dy: completed.dy,
-        });
-      }
-    };
-    svg.addEventListener("pointerup", finishDrag);
-    svg.addEventListener("pointercancel", (event) => {
-      if (!drag || drag.pointerId !== event.pointerId) return;
-      drag.element.removeAttribute("transform");
-      drag.element.classList.remove("dragging");
-      drag.ghost.remove();
-      drag = null;
-    });
-    const activateNode = (event) => {
-      const target = event.target.closest?.("[data-line]");
-      if (!target || !["Enter", " "].includes(event.key)) return;
-      event.preventDefault();
-      options.onNodeClick?.({ id: target.dataset.id ?? null, lineNumber: Number(target.dataset.line) });
-    };
-    svg.addEventListener("keydown", activateNode);
-  }
+  svg.addEventListener("keydown", activateNode);
 }
 
 function serialize(svg) {

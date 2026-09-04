@@ -30,4 +30,4 @@ where = ["src"]
 include = ["pug_sankey*"]
 
 [tool.setuptools.package-data]
-pug_sankey = ["web/*", "web/vendor/mathjax/*"]
+pug_sankey = ["web/*"]
