@@ -16,6 +16,7 @@ const NODE_STYLE_PROPERTIES = new Set(["color", ...FONT_FIELDS]);
 const FLOW_STYLE_PROPERTIES = new Set(["color", "label", ...FONT_FIELDS]);
 const CANVAS_SETTINGS = new Set([
   "background", "font", "node-labels", "node-values", "flow-labels", "flow-values", "blend",
+  "label-color", "node-value-color", "flow-value-color", "label-font-size", "value-font-size",
 ]);
 const VISIBILITY_SETTINGS = new Set(["node-labels", "node-values", "flow-labels", "flow-values"]);
 
@@ -251,6 +252,9 @@ function canvasSettingsFor(diagram, errors) {
     const value = child.text.trim();
     if (CANVAS_SETTINGS.has(child.type)) {
       if (!value) errors.push(`Line ${child.lineNumber}: .${child.type} needs a value.`);
+      else if (["label-font-size", "value-font-size"].includes(child.type) && (!Number.isFinite(Number(value)) || Number(value) <= 0 || Number(value) > 96)) {
+        errors.push(`Line ${child.lineNumber}: .${child.type} must be a number greater than 0 and at most 96.`);
+      }
       else settings[child.type] = value;
       continue;
     }
@@ -288,6 +292,11 @@ function figureStyle(settings) {
     merge: null,
     annotation: settings["annotation.color"] ?? null,
     font: settings.font ?? null,
+    labelColor: settings["label-color"] ?? null,
+    nodeValueColor: settings["node-value-color"] ?? null,
+    flowValueColor: settings["flow-value-color"] ?? null,
+    labelFontSize: Number(settings["label-font-size"] ?? 11),
+    valueFontSize: Number(settings["value-font-size"] ?? 9),
     nodeLabels: visibility(settings["node-labels"], true),
     nodeValues: visibility(settings["node-values"], true),
     flowLabels: visibility(settings["flow-labels"], false),

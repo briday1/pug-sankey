@@ -38,7 +38,7 @@ test("canvas still edits color/label/value via the inspector", () => {
 test("app fetches the CLI-provided project file (--gui)", () => {
   assert.ok(app.includes('launchParams.get("project") === "1"'), "reads the project param");
   assert.ok(app.includes('fetch("/__project.pug")'), "fetches the project pug");
-  assert.ok(app.includes('fetch("/__project.css")'), "fetches the project css");
+  assert.ok(!app.includes('fetch("/__project.css")'), "uses Pug as the only source document");
 });
 
 test("app honors the --vim launch flag", () => {

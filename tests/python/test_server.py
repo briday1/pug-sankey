@@ -36,7 +36,7 @@ class ServerTests(unittest.TestCase):
         status, headers, body = self.get("/")
         self.assertEqual(status, 200)
         self.assertIn(b"Pug Sankey", body)
-        self.assertIn(f"Version <span>{__version__}</span>".encode(), body)
+        self.assertNotIn(b"about-version", body)
         self.assertIn(b"https://github.com/briday1/pug-sankey", body)
         self.assertEqual(body.count(b"Open Documentation"), 1)
         self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
@@ -57,11 +57,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(headers.get_content_type(), "application/json")
         self.assertEqual(json.loads(body), {"status": "ok", "version": __version__})
 
-    def test_serves_an_optional_paired_gui_project(self):
+    def test_serves_an_optional_pug_gui_project(self):
         self.server.project_pug = "#canvas\n"
-        self.server.project_css = "@node card { fill: #fff; }\n"
         self.assertEqual(self.get("/__project.pug")[2], b"#canvas\n")
-        self.assertEqual(self.get("/__project.css")[2], b"@node card { fill: #fff; }\n")
 
     def test_cli_accepts_numbered_demos_and_defaults_to_one(self):
         self.assertIsNone(build_parser().parse_args([]).demo)

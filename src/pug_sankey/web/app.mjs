@@ -21,11 +21,12 @@ import { attachVimMode } from "./vim-mode.mjs";
 import { attachTextEditor } from "./text-editor.mjs";
 import { applyHighlights } from "./syntax-highlight.mjs";
 import { ADDITIONAL_DEMOS } from "./demo-sources.mjs";
+import { setDiagramSettings } from "./diagram-settings.mjs";
 
 // ---- demo library ----------------------------------------------------------
 
 const SHOWCASE = `// Pug Sankey showcase — edit anything and watch the preview update.
-.background #f8fafc
+.background #18181f
 .node-labels show
 .node-values show
 .flow-values show
@@ -34,23 +35,23 @@ const SHOWCASE = `// Pug Sankey showcase — edit anything and watch the preview
 node
   .id sources
   .label Sources
-  .color #2e6ba7
+  .color #4cc9f0
 node
   .id electricity
   .label Electricity
-  .color #3fa06b
+  .color #72efb1
 node
   .id heat
   .label Heat
-  .color #e07a3f
+  .color #ff9f68
 node
   .id homes
   .label Homes
-  .color #b04a8a
+  .color #d98cff
 node
   .id industry
   .label Industry
-  .color #c9a227
+  .color #f9dc5c
 
 flow
   .from sources
@@ -78,7 +79,7 @@ flow
   .value 18
 `;
 
-const DEMOS = [{ name: "Energy showcase", pug: SHOWCASE, css: "" }, ...ADDITIONAL_DEMOS];
+const DEMOS = [{ name: "Energy showcase", pug: SHOWCASE }, ...ADDITIONAL_DEMOS];
 
 // ---- dom -------------------------------------------------------------------
 
@@ -110,8 +111,7 @@ const selectedDemo = Number.isInteger(requestedDemo) && DEMOS[requestedDemo - 1]
 const wantsProject = launchParams.get("project") === "1";
 
 let pugSource = selectedDemo >= 0 && !wantsProject ? (DEMOS[selectedDemo].pug ?? "") : "";
-let cssSource = selectedDemo >= 0 && !wantsProject ? (DEMOS[selectedDemo].css ?? "") : "";
-let activeDocument = "pug";
+const cssSource = "";
 let diagram = null;
 let currentGraph = null;
 let selections = [];
@@ -119,12 +119,7 @@ let selections = [];
 async function loadProjectIfRequested() {
   if (!wantsProject) return;
   try {
-    const [pug, css] = await Promise.all([
-      fetch("/__project.pug").then((response) => (response.ok ? response.text() : "")),
-      fetch("/__project.css").then((response) => (response.ok ? response.text() : "")),
-    ]);
-    pugSource = pug;
-    cssSource = css;
+    pugSource = await fetch("/__project.pug").then((response) => (response.ok ? response.text() : ""));
   } catch { /* no project served — fall through to blank */ }
 }
 let canvasZoomPercent = 100;
@@ -135,8 +130,8 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
 }
 
-function activeValue() { return activeDocument === "css" ? cssSource : pugSource; }
-function setActiveValue(value) { if (activeDocument === "css") cssSource = value; else pugSource = value; }
+function activeValue() { return pugSource; }
+function setActiveValue(value) { pugSource = value; }
 
 // ---- editor chrome ---------------------------------------------------------
 
@@ -156,7 +151,6 @@ function updateEditorChrome() {
 
 function selectSourceLine({ lineNumber }) {
   if (!Number.isFinite(lineNumber) || lineNumber < 1) return;
-  if (activeDocument !== "pug") switchDocument("pug");
   const lines = source.value.split("\n");
   let start = 0;
   for (let i = 0; i < lineNumber - 1 && i < lines.length; i += 1) start += lines[i].length + 1;
@@ -178,16 +172,7 @@ function showToast(message) {
 
 // ---- documents -------------------------------------------------------------
 
-function switchDocument(name) {
-  activeDocument = name;
-  document.querySelectorAll("[data-source-tab]").forEach((tab) => {
-    const active = tab.dataset.sourceTab === name;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", String(active));
-  });
-  source.value = activeValue();
-  updateEditorChrome();
-}
+function showSource() { source.value = pugSource; updateEditorChrome(); }
 
 // ---- render ----------------------------------------------------------------
 
@@ -228,7 +213,7 @@ function update() {
 
 function persistWorkspace() {
   try {
-    sessionStorage.setItem("pug-sankey-workspace", JSON.stringify({ pugSource, cssSource, activeDocument }));
+    sessionStorage.setItem("pug-sankey-workspace", JSON.stringify({ pugSource }));
   } catch { /* storage may be unavailable */ }
 }
 
@@ -238,8 +223,6 @@ function restoreWorkspace() {
     const saved = JSON.parse(sessionStorage.getItem("pug-sankey-workspace") ?? "null");
     if (saved && typeof saved.pugSource === "string") {
       pugSource = saved.pugSource;
-      cssSource = typeof saved.cssSource === "string" ? saved.cssSource : "";
-      activeDocument = saved.activeDocument === "css" ? "css" : "pug";
     }
   } catch { /* ignore corrupt state */ }
 }
@@ -330,7 +313,7 @@ function renderNodeInspector(node) {
     input.addEventListener("change", () => applyNodeField(node, input.dataset.nodeField, input));
   });
   $("#insp-add-flow").addEventListener("click", () => openBuilder("flow", node));
-  $("#insp-add-annotation").addEventListener("click", () => { pushUndo(); pugSource = appendNodeAnnotation(pugSource, node.lineNumber, {}); if (activeDocument === "pug") source.value = pugSource; update(); });
+  $("#insp-add-annotation").addEventListener("click", () => { pushUndo(); pugSource = appendNodeAnnotation(pugSource, node.lineNumber, {}); source.value = pugSource; update(); });
 }
 
 function applyNodeField(node, name, input) {
@@ -346,7 +329,7 @@ function applyNodeField(node, name, input) {
   } else {
     pugSource = setNodeField(pugSource, node.lineNumber, name, value ?? "");
   }
-  if (activeDocument === "pug") source.value = pugSource;
+  source.value = pugSource;
   update();
 }
 
@@ -360,7 +343,7 @@ function renderFlowInspector(edge) {
     input.addEventListener("change", () => {
       pushUndo();
       pugSource = setStructuralField(pugSource, edge.lineNumber, input.dataset.flowField, input.value);
-      if (activeDocument === "pug") source.value = pugSource;
+      source.value = pugSource;
       update();
     });
   });
@@ -374,7 +357,7 @@ $("#delete-selection").addEventListener("click", () => {
   if (node) pugSource = removeDeclarationSafe(node.lineNumber);
   else if (edge) pugSource = removeDeclarationSafe(edge.lineNumber);
   selections = [];
-  if (activeDocument === "pug") source.value = pugSource;
+  source.value = pugSource;
   update();
 });
 
@@ -440,7 +423,7 @@ $("#graph-builder-form").addEventListener("submit", (event) => {
     pugSource = appendDiagramNode(pugSource, { id, label, color });
   }
   builder.close();
-  if (activeDocument === "pug") source.value = pugSource;
+  source.value = pugSource;
   update();
   showToast(builderMode === "flow" ? "Flow added" : "Node added");
 });
@@ -456,14 +439,14 @@ function undoCanvas() {
   if (!canvasUndo.length) return;
   canvasRedo.push(pugSource);
   pugSource = canvasUndo.pop();
-  if (activeDocument === "pug") source.value = pugSource;
+  source.value = pugSource;
   update();
 }
 function redoCanvas() {
   if (!canvasRedo.length) return;
   canvasUndo.push(pugSource);
   pugSource = canvasRedo.pop();
-  if (activeDocument === "pug") source.value = pugSource;
+  source.value = pugSource;
   update();
 }
 $("#undo-canvas").addEventListener("click", undoCanvas);
@@ -539,7 +522,6 @@ $("#toggle-layers").addEventListener("click", () => {
   const collapsed = main.classList.toggle("layers-collapsed");
   $("#toggle-layers").setAttribute("aria-expanded", String(!collapsed));
 });
-document.querySelectorAll("[data-source-tab]").forEach((tab) => tab.addEventListener("click", () => switchDocument(tab.dataset.sourceTab)));
 
 function attachResizer(handle, cssVar, invert = false) {
   if (!handle) return;
@@ -569,21 +551,18 @@ function download(blob, filename) {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(anchor.href), 1000);
 }
-function saveSource() { download(new Blob([activeValue()], { type: "text/plain;charset=utf-8" }), activeDocument === "css" ? "diagram.css" : "diagram.pug"); }
+function saveSource() { download(new Blob([pugSource], { type: "text/plain;charset=utf-8" }), "diagram.pug"); }
 $("#save-source").addEventListener("click", saveSource);
 $("#save-source-as").addEventListener("click", saveSource);
-$("#new-pug").addEventListener("click", () => { pushUndo(); pugSource = ""; if (activeDocument !== "pug") switchDocument("pug"); else { source.value = ""; } update(); });
-$("#new-css").addEventListener("click", () => { pushUndo(); cssSource = ""; switchDocument("css"); update(); });
+$("#new-pug").addEventListener("click", () => { pushUndo(); pugSource = ""; source.value = ""; update(); });
 
 const fileInput = $("#source-file");
 $("#load-source").addEventListener("click", () => fileInput.click());
 fileInput.addEventListener("change", async () => {
-  for (const file of fileInput.files) {
-    const text = await file.text();
-    if (/\.css$/i.test(file.name)) { cssSource = text; } else { pugSource = text; }
-  }
+  const file = fileInput.files[0];
+  if (file) pugSource = await file.text();
   fileInput.value = "";
-  switchDocument("pug");
+  showSource();
   update();
   showToast("Source loaded");
 });
@@ -613,21 +592,55 @@ $("#copy-export-form").addEventListener("submit", (e) => { e.preventDefault(); d
 
 // ---- theme / vim ---------------------------------------------------------------
 
+const appearance = $("#diagram-appearance");
+const appearanceForm = $("#diagram-appearance-form");
+const appearanceFields = {
+  "node-labels": "nodeLabels", "node-values": "nodeValues",
+  "flow-labels": "flowLabels", "flow-values": "flowValues",
+  "label-color": "labelColor", "node-value-color": "nodeValueColor", "flow-value-color": "flowValueColor",
+  "font": "font", "label-font-size": "labelFontSize", "value-font-size": "valueFontSize",
+};
+$("#open-diagram-appearance").addEventListener("click", () => {
+  const figure = currentGraph?.figure ?? parseDiagram(pugSource).figure;
+  for (const [name,key] of Object.entries(appearanceFields)) {
+    const value = figure[key];
+    appearanceForm.elements.namedItem(name).value = typeof value === "boolean" ? (value ? "show" : "hide") : (value ?? "");
+  }
+  $("#appearance-error").textContent = "";
+  appearance.showModal();
+});
+$("#appearance-cancel").addEventListener("click", () => appearance.close());
+appearanceForm.addEventListener("submit", event => {
+  event.preventDefault();
+  const settings = Object.fromEntries(Object.keys(appearanceFields).map(name => [name,appearanceForm.elements.namedItem(name).value.trim()]));
+  for (const [name,value] of Object.entries(settings)) {
+    if (name.endsWith("-color") && value && !CSS.supports("color",value)) {
+      $("#appearance-error").textContent = "Enter a valid color: a hex code, RGB value, or color name.";
+      return;
+    }
+  }
+  const next = setDiagramSettings(pugSource, settings);
+  const parsed = parseDiagram(next);
+  if (parsed.errors.length) { $("#appearance-error").textContent = parsed.errors[0]; return; }
+  pushUndo(); pugSource = next; source.value = next; update(); appearance.close();
+});
+
 const themeButton = $("#theme");
 const themeValue = $("#theme-value");
+const themeStorageKey = "pug-sankey-theme-v2";
 function applyTheme(mode) {
   document.documentElement.dataset.theme = mode === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
   themeValue.textContent = mode[0].toUpperCase() + mode.slice(1);
-  try { localStorage.setItem("pug-sankey-theme", mode); } catch { /* ignore */ }
+  try { localStorage.setItem(themeStorageKey, mode); } catch { /* ignore */ }
 }
 themeButton.addEventListener("click", () => {
-  const order = ["system", "light", "dark"];
-  const current = (localStorage.getItem("pug-sankey-theme") ?? "system");
+  const order = ["dark", "light", "system"];
+  const current = (localStorage.getItem(themeStorageKey) ?? "dark");
   applyTheme(order[(order.indexOf(current) + 1) % order.length]);
 });
-applyTheme((() => { try { return localStorage.getItem("pug-sankey-theme") ?? "system"; } catch { return "system"; } })());
+applyTheme((() => { try { return localStorage.getItem(themeStorageKey) ?? "dark"; } catch { return "dark"; } })());
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if ((localStorage.getItem("pug-sankey-theme") ?? "system") === "system") applyTheme("system");
+  if (localStorage.getItem(themeStorageKey) === "system") applyTheme("system");
 });
 
 attachVimMode(source, $("#vim-mode"), $("#vim-status"));
@@ -652,7 +665,7 @@ document.addEventListener("keydown", (event) => {
 source.addEventListener("input", () => { setActiveValue(source.value); update(); });
 source.addEventListener("keyup", updateEditorChrome);
 source.addEventListener("click", updateEditorChrome);
-source.addEventListener("beforeinput", () => { if (activeDocument === "pug") pushUndo(); });
+source.addEventListener("beforeinput", pushUndo);
 source.addEventListener("scroll", () => {
   lineNumbers.style.transform = `translateY(${-source.scrollTop}px)`;
 });
@@ -682,7 +695,7 @@ $("#add-image")?.addEventListener("click", () => openBuilder("node"));
 async function boot() {
   await loadProjectIfRequested();
   restoreWorkspace();
-  switchDocument(activeDocument);
+  showSource();
   update();
 }
 boot();

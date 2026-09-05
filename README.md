@@ -1,12 +1,30 @@
 # Pug Sankey
 
-A source-first **Sankey diagram** editor and command-line renderer. Diagrams stay editable as readable `.pug` files, and SVG/PNG are export formats. The value on each flow sets the ribbon thickness, every flow keeps its own color, and ribbons blend between their source and target colors.
+A source-first **flow diagram** editor and command-line renderer. Diagrams stay editable as readable `.pug` files, and SVG/PNG are export formats. Solid ribbons gather into shared trunks and separate into branches, ending in pointed destination silhouettes. Ribbon width represents quantity on one common linear scale. There are no interior carets or striped strands.
+
+The plotting engine is implemented here in `flow-layout.mjs` and `flowfield.mjs`, with connectivity tracing in `flow-fabric.mjs`. Hover or keyboard-focus a branch to trace its upstream and downstream routes. Click to pin the trace; click again, click the background, or press Escape to reset it. Exports always show the full overview. Tracing describes connectivity, not an inferred allocation of inputs to outputs after a merge.
+
+`flow-geometry.mjs` supplies smooth routes with horizontal tangents at their joins, without decorative waves.
+
+Names and totals sit together outside the flow. Branch values are shown quietly inside their channels; details on channels narrower than 12 pixels appear on hover or keyboard focus to avoid colliding labels. Exports keep the uncluttered overview. All values remain in the Pug source and SVG accessibility descriptions.
+
+Use **Settings → Diagram labels & values** to hide totals or branch values independently, change their colors, and adjust font family and sizes. These options are stored directly in Pug, so they work in the CLI and exports too:
+
+```pug
+.node-values hide
+.flow-values hide
+.label-color #dce4e7
+.node-value-color #8f9fa8
+.flow-value-color #f2c879
+.label-font-size 11
+.value-font-size 9
+```
 
 **[Try the online editor on GitHub Pages →](https://briday1.github.io/pug-sankey/)**
 
 ## What it does
 
-- **Value-driven sizing** — the `.value` on each `flow` determines both the ribbon thickness and the height of the node bars it connects. A node may also declare its own `.value`; when present it becomes the authoritative size of the bar (useful for isolated nodes with no flows yet), and the source is validated to make sure it agrees with the node's flow totals.
+- **Value-driven sizing** — every channel uses the same linear quantity scale. Logical nodes describe shared trunks; their `.value`, if declared, must agree with their flow totals. Very small channels keep their exact visual width but have larger invisible selection targets.
 - **Per-flow color, blended** — give any `flow` a `.color`, or leave it unset and the ribbon blends from its source node's color toward its target node's color (controlled by `.blend`).
 - **Arbitrary branching and merging** — a node may feed many nodes and be fed by many nodes; the layout stacks and reconfigures columns automatically.
 - **Annotation options** — toggle node labels, node values, flow labels, and flow values independently.
@@ -32,6 +50,8 @@ The server opens <http://127.0.0.1:4173> automatically. Examples of server optio
 
 ```powershell
 pug-sankey --no-browser
+pug-sankey serve --no-browser       # explicit local server command
+pug-sankey serve diagram.pug        # serve and open a Pug file
 pug-sankey --host 0.0.0.0 --port 8080 --vim
 pug-sankey --demo                  # demo 1
 pug-sankey --demo 5                # choose any demo from 1–8
@@ -235,7 +255,7 @@ Pass layout spacing when creating the diagram:
 
 ```js
 createBlockDiagram(element, source, {
-  layout: { columnGutter: 120, nodeGutter: 28, padding: 60, nodeWidth: 16, targetHeight: 420 },
+  layout: { columnGutter: 204, nodeGutter: 84, padding: 62, nodeWidth: 116, targetHeight: 108 },
 });
 ```
 

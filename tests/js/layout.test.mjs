@@ -31,7 +31,7 @@ flow
   assert.equal(col.c, 2);
 });
 
-test("node heights are proportional to flow value", () => {
+test("trunk cross sections are proportional to flow value", () => {
   const layout = makeLayout(`node
   .id a
 node
@@ -49,9 +49,9 @@ flow
 `);
   const big = layout.nodes.find((node) => node.id === "big");
   const small = layout.nodes.find((node) => node.id === "small");
-  assert.ok(big.height > small.height, "bigger value should mean a taller bar");
+  assert.ok(big.channelHeight > small.channelHeight, "bigger value should mean a wider trunk");
   // 4:1 ratio should be preserved (within min-height clamping).
-  const ratio = big.height / small.height;
+  const ratio = big.channelHeight / small.channelHeight;
   assert.ok(ratio > 3, `expected ~4x height ratio, got ${ratio}`);
 });
 

@@ -91,8 +91,6 @@ nav { display: flex; align-items: center; gap: 8px; }
 .toolbar-popover > button:hover, .toolbar-popover > label:hover, .toolbar-popover > a:hover { color: var(--heading); background: var(--code-bg); }
 .about-menu { margin-right: 2px; padding-right: 10px; border-right: 1px solid var(--border); }
 .about-menu > summary { padding-left: 2px; font-size: 13px; letter-spacing: -.01em; }
-.about-version { margin: 0; padding: 5px 8px 8px; color: var(--muted); font-size: 10px; }
-.about-version span { color: var(--heading); font-weight: 650; }
 .menu-separator { display: block; height: 1px; margin: 5px 3px; background: var(--border); }
 .toolbar-divider { width: 1px; height: 20px; margin: 0 5px; background: var(--border); }
 .icon-tool { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; border: 0; border-radius: 5px; color: var(--muted); background: transparent; }
@@ -637,3 +635,76 @@ button.danger:hover { color: var(--danger); border-color: var(--danger); backgro
 .inspector-sidecar[data-side="left"] .sidecar-pointer { right: -6px; border-width: 1px 1px 0 0; }
 .inspector-sidecar[data-side="right"] .sidecar-pointer { left: -6px; border-width: 0 0 1px 1px; }
 .connection-actions { display: grid; gap: 6px; grid-template-columns: 1fr 1fr; margin-top: 8px; }
+
+/* 2026 interface refresh: quieter chrome, sharper hierarchy, roomier canvas. */
+:root {
+  --page: #f5f5f7;
+  --panel: rgba(255, 255, 255, .94);
+  --surface: #ffffff;
+  --surface-soft: #f7f7fa;
+  --canvas: #ececf1;
+  --canvas-dot: #c7c7d0;
+  --border: #e4e4e9;
+  --border-strong: #d3d3dc;
+  --text: #34343d;
+  --heading: #111116;
+  --muted: #71717e;
+  --faint: #9a9aa6;
+  --accent: #6c5ce7;
+  --accent-hover: #5948d6;
+  --code-bg: #f0effb;
+  --selection: rgba(108, 92, 231, .16);
+  --shadow: rgba(28, 25, 48, .12);
+}
+:root[data-theme="dark"] {
+  --page: #0b0d11;
+  --panel: rgba(16, 19, 24, .96);
+  --surface: #171b22;
+  --surface-soft: #11151b;
+  --canvas: #0d1015;
+  --canvas-dot: #29313b;
+  --border: #252b34;
+  --border-strong: #39424e;
+  --text: #cbd3dd;
+  --heading: #f4f7fb;
+  --muted: #8793a1;
+  --faint: #5f6b78;
+  --accent: #54d7eb;
+  --accent-hover: #7ee4f2;
+  --code-bg: #14262d;
+  --selection: rgba(84, 215, 235, .18);
+}
+body { letter-spacing: -.005em; }
+header {
+  height: 50px;
+  padding: 0 16px;
+  border-bottom-color: color-mix(in srgb, var(--border) 82%, transparent);
+  background: var(--panel);
+  box-shadow: 0 1px 0 rgb(255 255 255 / .35);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+main { height: calc(100vh - 50px); --panel-width: 410px; }
+.toolbar-menu > summary, .icon-tool { height: 32px; border-radius: 8px; font-size: 12px; }
+.about-menu > summary { padding: 0 13px 0 3px; font-size: 14px; font-weight: 750; letter-spacing: -.025em; }
+.toolbar-popover { top: calc(100% + 7px); padding: 7px; border-radius: 12px; box-shadow: 0 18px 50px var(--shadow); }
+.toolbar-popover > button, .toolbar-popover > label, .toolbar-popover > a { min-height: 34px; border-radius: 7px; font-size: 12px; }
+#source-panel { padding: 21px 18px 15px; }
+.panel-title { min-height: 40px; margin: 0 2px 14px; }
+.panel-title h1 { margin: 2px 0 0; font-size: 16px; font-weight: 720; letter-spacing: -.025em; }
+.eyebrow { color: var(--faint); font-size: 9px; font-weight: 750; letter-spacing: .16em; }
+.editor-shell { border-radius: 12px; background: var(--surface-soft); box-shadow: inset 0 1px 2px rgb(0 0 0 / .02); }
+.editor-shell::before { background: var(--surface-soft); }
+#source { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; font-size: 12px; }
+.editor-hint { padding: 10px 2px 0; }
+kbd { border-radius: 4px; box-shadow: 0 1px 0 var(--border-strong); }
+.preview { padding: 16px; background: var(--page); }
+.canvas-shell { border-color: var(--border); border-radius: 16px; box-shadow: 0 8px 30px rgb(28 25 48 / .06), inset 0 1px rgb(255 255 255 / .5); }
+#diagram svg { border-radius: 10px; box-shadow: 0 16px 42px rgb(28 25 48 / .12); }
+.zoom-controls { border-radius: 10px; box-shadow: 0 8px 24px var(--shadow); }
+.zoom-controls button { border-radius: 7px; }
+.canvas-inspector, .inspector-sidecar { border-radius: 14px; box-shadow: 0 18px 50px var(--shadow); }
+.layers-panel { padding: 20px 16px; }
+dialog { border-radius: 16px; box-shadow: 0 28px 90px rgb(0 0 0 / .3); }
+.builder-grid input, .builder-grid select, .builder-grid textarea { min-height: 39px; border-radius: 9px; }
+.dialog-actions button { height: 38px; border-radius: 9px; }
+@media (max-width: 1050px) { main { --panel-width: 370px; } }
