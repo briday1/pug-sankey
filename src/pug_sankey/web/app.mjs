@@ -2,8 +2,8 @@
 //
 // A single editor surface that works entirely on the canvas, entirely in
 // source, or both at once. The source is the single editable representation;
-// the canvas is a live rendering that can click-to-select source lines, drag
-// nodes/labels to nudge them, and build new nodes/flows through dialogs.
+// the canvas renders one diagram, selects source lines, and lets you add or
+// edit its nodes and flows through dialogs.
 
 import { createBlockDiagram, parseDiagram } from "./pugflow.mjs";
 import {
@@ -96,10 +96,10 @@ const toast = $("#canvas-toast");
 const main = document.querySelector("main");
 const inspector = $("#canvas-inspector");
 const inspectorContent = $("#inspector-content");
-const nodeCount = $("#graph-node-count");
-const flowCount = $("#graph-flow-count");
-const nodesList = $("#graph-nodes-list");
-const flowsList = $("#graph-flows-list");
+const nodeCount = $("#node-count");
+const flowCount = $("#flow-count");
+const nodesList = $("#nodes-list");
+const flowsList = $("#flows-list");
 
 // ---- state -----------------------------------------------------------------
 
@@ -260,7 +260,7 @@ function renderLayersPanel() {
   nodesList.replaceChildren(...nodes.map((node) => {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = "graph-item";
+    item.className = "object-item";
     item.innerHTML = `<strong>${escapeHtml(node.label || node.id)}</strong><small>${escapeHtml(node.id)} · value ${escapeHtml(node.hasDeclaredValue ? node.declaredValue : "auto")}</small>`;
     item.addEventListener("click", () => { selections = [{ kind: "node", id: node.id, selectionKey: node.id, lineNumber: node.lineNumber }]; paintSelections(); renderInspector(); selectSourceLine({ lineNumber: node.lineNumber }); });
     return item;
@@ -268,7 +268,7 @@ function renderLayersPanel() {
   flowsList.replaceChildren(...flows.map((edge) => {
     const item = document.createElement("button");
     item.type = "button";
-    item.className = "graph-item";
+    item.className = "object-item";
     item.innerHTML = `<strong>${escapeHtml(edge.from)} → ${escapeHtml(edge.to)}</strong><small>value ${escapeHtml(edge.value)}</small>`;
     item.addEventListener("click", () => { selections = [{ kind: "line", from: edge.from, to: edge.to, selectionKey: `${edge.from}|${edge.to}|${edge.lineNumber}`, lineNumber: edge.lineNumber }]; paintSelections(); renderInspector(); selectSourceLine({ lineNumber: edge.lineNumber }); });
     return item;
@@ -376,8 +376,8 @@ function pugSourceRemove(lineNumber) {
 
 // ---- builder (New node / flow) ----------------------------------------------
 
-const builder = $("#graph-builder");
-const builderTitle = $("#graph-builder-title");
+const builder = $("#element-builder");
+const builderTitle = $("#element-builder-title");
 const builderSubmit = $("#builder-submit");
 let builderMode = "node";
 let builderContextNode = null;
@@ -389,7 +389,7 @@ function openBuilder(mode, contextNode = null) {
   builderTitle.textContent = isFlow ? "Add flow" : "Add node";
   builderSubmit.textContent = isFlow ? "Create flow" : "Create node";
   builder.querySelectorAll(".flow-only").forEach((el) => { el.style.display = isFlow ? "" : "none"; });
-  builder.querySelectorAll(".new-target-only").forEach((el) => { el.style.display = isFlow ? "none" : ""; });
+  builder.querySelectorAll(".node-only").forEach((el) => { el.style.display = isFlow ? "none" : ""; });
   $("#builder-error").textContent = "";
   if (isFlow) {
     const options = (currentGraph?.nodes ?? []).map((node) => `<option value="${escapeHtml(node.id)}">${escapeHtml(node.label || node.id)}</option>`).join("");
@@ -401,7 +401,7 @@ function openBuilder(mode, contextNode = null) {
 }
 
 $("#builder-cancel")?.addEventListener("click", () => builder.close());
-$("#graph-builder-form").addEventListener("submit", (event) => {
+$("#element-builder-form").addEventListener("submit", (event) => {
   event.preventDefault();
   if (builderMode === "flow") {
     const from = $("#builder-from-id").value;
@@ -689,8 +689,6 @@ source.addEventListener("keydown", (event) => {
 
 $("#add-node").addEventListener("click", () => openBuilder("node"));
 $("#add-flow").addEventListener("click", () => openBuilder("flow"));
-$("#add-diagram")?.addEventListener("click", () => openBuilder("node"));
-$("#add-image")?.addEventListener("click", () => openBuilder("node"));
 
 async function boot() {
   await loadProjectIfRequested();

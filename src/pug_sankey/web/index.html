@@ -11,7 +11,7 @@
   </head>
   <body>
     <header class="app-toolbar">
-      <details class="toolbar-menu about-menu">
+      <details class="toolbar-menu about-menu" name="application-menu">
         <summary>Pug Sankey</summary>
         <div class="toolbar-popover">
           <strong>ABOUT</strong>
@@ -20,7 +20,7 @@
         </div>
       </details>
       <nav class="global-actions" aria-label="Application menu">
-        <details class="toolbar-menu file-menu">
+        <details class="toolbar-menu file-menu" name="application-menu">
           <summary>Project</summary>
           <div class="toolbar-popover">
             <strong>SOURCE</strong>
@@ -30,15 +30,15 @@
             <button id="save-source-as" type="button">Save As…</button>
             <span class="menu-separator"></span>
             <strong>DIAGRAM</strong>
-            <button id="open-copy-export" type="button">Copy image…</button>
-            <button id="open-save-export" type="button">Save image…</button>
+            <button id="open-copy-export" type="button">Copy diagram…</button>
+            <button id="open-save-export" type="button">Export diagram…</button>
           </div>
         </details>
-        <details class="toolbar-menu new-menu">
+        <details class="toolbar-menu new-menu" name="application-menu">
           <summary>New</summary>
-          <div class="toolbar-popover"><button id="add-diagram" type="button">Graph</button><button id="add-node" type="button">Node</button><button id="add-image" type="button">Image</button><button id="add-flow" type="button">Flow</button></div>
+          <div class="toolbar-popover"><button id="add-node" type="button">Node</button><button id="add-flow" type="button">Flow</button></div>
         </details>
-        <details class="toolbar-menu settings-menu">
+        <details class="toolbar-menu settings-menu" name="application-menu">
           <summary>Settings</summary>
           <div class="toolbar-popover">
             <button class="theme-toggle" id="theme" type="button" aria-label="Toggle light and dark theme" title="Theme follows your system until toggled"><span class="theme-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg></span><span class="theme-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"></path></svg></span><span>Theme</span><small id="theme-value">System</small></button>
@@ -52,7 +52,6 @@
         <button class="icon-tool" id="redo-canvas" type="button" aria-label="Redo" title="Redo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5"></path><path d="M19 12h-8a6 6 0 0 0-6 6"></path></svg></button>
       </nav>
       <input id="source-file" type="file" accept=".pug,text/plain" hidden />
-      <input id="node-image-file" type="file" accept="image/*" hidden />
     </header>
 
     <main class="layers-collapsed">
@@ -83,15 +82,10 @@
       <button class="layers-toggle panel-toggle" id="toggle-layers" type="button" aria-controls="layers-panel" aria-expanded="false" aria-label="Show objects panel" title="Show objects panel"><span class="toggle-arrow" aria-hidden="true">‹</span><span class="toggle-label">Objects</span></button>
 
       <aside class="layers-panel" id="layers-panel" aria-label="Objects">
-        <div class="layers-title"><div><small>CANVAS STRUCTURE</small><h2>Objects</h2></div></div>
-        <details class="graph-browser-section graph-ordering" open>
-          <summary>Graphs <small id="graph-count">0</small></summary>
-          <div class="layers-list" id="layers-list" role="list" aria-label="Graph stacking order"></div>
-        </details>
-        <section class="graph-browser">
-          <label>Graph<select id="graph-browser-select" aria-label="Choose graph"></select></label>
-          <details class="graph-browser-section" open><summary>Nodes and images <small id="graph-node-count">0</small></summary><div class="graph-item-list" id="graph-nodes-list" role="list" aria-label="Nodes and images in selected graph"></div></details>
-          <details class="graph-browser-section" open><summary>Flows <small id="graph-flow-count">0</small></summary><div class="graph-item-list" id="graph-flows-list" role="list" aria-label="Flows associated with selected graph"></div></details>
+        <div class="layers-title"><div><small>DIAGRAM</small><h2>Objects</h2></div></div>
+        <section class="objects-browser" aria-label="Diagram objects">
+          <details class="object-section" open><summary>Nodes <small id="node-count">0</small></summary><div class="object-list" id="nodes-list" role="list" aria-label="Nodes in this diagram"></div></details>
+          <details class="object-section" open><summary>Flows <small id="flow-count">0</small></summary><div class="object-list" id="flows-list" role="list" aria-label="Flows in this diagram"></div></details>
         </section>
       </aside>
     </main>
@@ -115,16 +109,16 @@
         <div class="dialog-actions"><button id="appearance-cancel" type="button">Cancel</button><button class="primary" type="submit">Apply</button></div>
       </form>
     </dialog>
-    <dialog id="graph-builder">
-      <form id="graph-builder-form">
-        <div class="dialog-title"><div><small>CANVAS BUILDER</small><h2 id="graph-builder-title">Add node</h2></div></div>
-        <p id="graph-builder-help">Add a node bar, or a weighted flow between two existing nodes.</p>
+    <dialog id="element-builder">
+      <form id="element-builder-form">
+        <div class="dialog-title"><h2 id="element-builder-title">Add node</h2></div>
+        <p class="dialog-help">Add a node or a weighted flow to this diagram.</p>
         <div class="builder-grid">
           <label class="flow-only">From<select id="builder-from-id"></select></label>
           <label class="flow-only">To<select id="builder-to-id"></select></label>
           <label class="flow-only">Value<input id="builder-value" type="number" min="0" step="any" value="10"></label>
-          <label class="new-target-only">ID<input id="builder-id" pattern="[A-Za-z][A-Za-z0-9_-]*" placeholder="unique-id"></label>
-          <label class="new-target-only">Label<input id="builder-label" placeholder="Optional visible text"></label>
+          <label class="node-only">ID<input id="builder-id" pattern="[A-Za-z][A-Za-z0-9_-]*" placeholder="unique-id"></label>
+          <label class="node-only">Label<input id="builder-label" placeholder="Optional visible text"></label>
           <label>Color<input id="builder-color" placeholder="Hex, RGB, or named color"></label>
           <label class="flow-only builder-wide">Flow label<input id="builder-flow-label" placeholder="Optional ribbon text"></label>
         </div>

@@ -23,9 +23,39 @@ test("the editor shell keeps the identical source + canvas sections", () => {
   }
 });
 
+test("toolbar dropdowns share a native exclusive group, separate from object panels", () => {
+  const details = [...html.matchAll(/<details\b[^>]*>/g)].map(match => match[0]);
+  const menus = details.filter(tag => /class="[^"]*\btoolbar-menu\b/.test(tag));
+  assert.equal(menus.length, 4, "About, Project, New, and Settings menus are grouped");
+  for (const menu of menus) assert.match(menu, /\bname="application-menu"/, "opening a toolbar menu closes the previous one");
+  for (const panel of details.filter(tag => !menus.includes(tag))) {
+    assert.doesNotMatch(panel, /\bname="application-menu"/, "object panels remain independently expandable");
+  }
+});
+
 test("no Clean Up button and no canvas dragging", () => {
   assert.ok(!html.includes("cleanup-diagram"), "Clean Up button should be removed");
   assert.ok(!/onElementMove/.test(app), "app should not wire element dragging");
+});
+
+test("New only creates nodes and flows in the single diagram", () => {
+  const menu = html.match(/<details\b[^>]*\bnew-menu\b[^>]*>([\s\S]*?)<\/details>/)?.[1];
+  assert.ok(menu);
+  assert.deepEqual([...menu.matchAll(/<button\b[^>]*id="([^"]+)"/g)].map(match => match[1]), ["add-node", "add-flow"]);
+  for (const removed of ["add-diagram", "add-image", "node-image-file", "graph-browser-select", "graph-count", "layers-list"]) {
+    assert.ok(!html.includes(`id="${removed}"`), `${removed} is not exposed`);
+    assert.ok(!app.includes(`#${removed}`), `${removed} has no leftover event wiring`);
+  }
+});
+
+test("the objects panel contains only nodes and flows, while image exports remain available", () => {
+  const objects = html.match(/<aside\b[^>]*id="layers-panel"[^>]*>([\s\S]*?)<\/aside>/)?.[1];
+  assert.ok(objects);
+  assert.doesNotMatch(objects, /<select\b|Graphs|Nodes and images|selected graph/);
+  assert.match(objects, /id="nodes-list"/);
+  assert.match(objects, /id="flows-list"/);
+  assert.equal([...objects.matchAll(/<details\b/g)].length, 2);
+  for (const id of ["open-copy-export", "open-save-export", "copy-export-format", "save-export-format"]) assert.ok(html.includes(`id="${id}"`));
 });
 
 test("canvas still edits color/label/value via the inspector", () => {
