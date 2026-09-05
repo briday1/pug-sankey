@@ -63,12 +63,14 @@ export function renderFlowField(container, graph, options = {}) {
   const sourceNodes = graph.nodes.map(n => ({ ...n, labelLines: wrapLabel(n.label || n.id, Math.max(8,Math.floor(trunkWidth/(labelSize*.56)))) }));
   const maxLabelLines = Math.max(1, ...sourceNodes.map(n => n.labelLines.length));
   const layout = layoutFlowField(sourceNodes, graph.edges, {
+    theme: graph.figure?.theme ?? "smooth",
     nodeWidth: trunkWidth, padding: Math.max(62,maxLabelLines*lineHeight+24),
     nodeGutter: Math.max(84, maxLabelLines * lineHeight + 36), ...options.layout,
   });
   const idPrefix = "exchange-" + (++instance);
   const svg = make("svg", {
-    xmlns: NS, viewBox: [layout.viewX, 0, layout.width, layout.height].join(" "),
+    xmlns: NS, viewBox: [layout.viewX, layout.viewY, layout.width, layout.height].join(" "),
+    "data-diagram-theme": layout.options.theme,
     width: layout.width, height: layout.height, role: "img",
     "aria-label": options.accessibleLabel || "Continuous flows split, merge, and branch into terminal arrows; width represents quantity",
     class: "pugflow-svg exchange-map" + (layout.nodes.length ? "" : " empty-diagram"),
@@ -93,7 +95,7 @@ export function renderFlowField(container, graph, options = {}) {
     ".exchange-map .selected-element .flow-trunk{stroke:" + colors.text + ";stroke-width:1}",
     "@media(prefers-reduced-motion:reduce){.exchange-map *{transition:none!important}}",
   ].join("\n");
-  svg.append(style, make("rect", { x: layout.viewX, y: 0, width: layout.width, height: layout.height, fill: colors.background }));
+  svg.append(style, make("rect", { x: layout.viewX, y: layout.viewY, width: layout.width, height: layout.height, fill: colors.background }));
   const defs = make("defs"); svg.append(defs);
   const byId = new Map(layout.nodes.map((node, index) => {
     node.color = node.color || PALETTE[index % PALETTE.length];

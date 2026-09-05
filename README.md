@@ -4,13 +4,35 @@ A source-first **flow diagram** editor and command-line renderer. Diagrams stay 
 
 The plotting engine is implemented here in `flow-layout.mjs` and `flowfield.mjs`, with connectivity tracing in `flow-fabric.mjs`. Hover or keyboard-focus a branch to trace its upstream and downstream routes. Click to pin the trace; click again, click the background, or press Escape to reset it. Exports always show the full overview. Tracing describes connectivity, not an inferred allocation of inputs to outputs after a merge.
 
-`flow-geometry.mjs` supplies smooth routes with horizontal tangents at their joins, without decorative waves.
+`flow-geometry.mjs` supplies selectable flow-shape themes, with horizontal tangents at the shared trunks. Existing files default to Smooth; every theme retains solid ribbons, pointed destinations, and the same quantity scale.
 
 Names and totals sit together outside the flow. Branch values are shown quietly inside their channels; details on channels narrower than 12 pixels appear on hover or keyboard focus to avoid colliding labels. Exports keep the uncluttered overview. All values remain in the Pug source and SVG accessibility descriptions.
 
-Use **Settings → Diagram labels & values** to hide totals or branch values independently, change their colors, and adjust font family and sizes. These options are stored directly in Pug, so they work in the CLI and exports too:
+Use **Settings → Diagram settings** to choose a flow theme, background, and color blending, or adjust the existing label/value visibility, colors, and typography. These options are stored directly in Pug, so they work in the CLI and exports too. This is separate from the editor's light/dark theme.
+
+Available `.theme` values:
+
+- `smooth` — the current flowing curves (default).
+- `wiggly` — broad waves that settle into the junctions.
+- `angular` — straight runs and crisp diagonal turns.
+- `terraced` — rounded transitions separated by level stretches.
+- `arc` — broad arches raised above the direct route.
+- `ripple` — repeated shallow waves along the ribbons.
+- `circuit` — orthogonal runs with rounded right-angle elbows.
+- `zigzag` — alternating, faceted bends.
+- `staircase` — three crisp steps between junctions.
+- `sail` — an early, asymmetric crest with a long settling curve.
+- `dip` — broad bowls curving below the direct route.
+- `s-bend` — long entrances with a concentrated, smooth central turn.
+
+Feedback loops retain their dedicated lanes; Angular makes those turns angular too. A theme never changes values, colors you've specified, node ordering, or the relationships in the diagram.
+
+The editor's Light/Dark toggle starts with your operating system's preference and remembers your choice once toggled. There is no separate System option. Light mode uses softened grey surfaces. Editor appearance is separate from the diagram's Pug settings.
 
 ```pug
+.theme wiggly
+.background #18181f
+.blend 60
 .node-values hide
 .flow-values hide
 .label-color #dce4e7

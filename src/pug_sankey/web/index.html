@@ -1,11 +1,23 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Build source-first Sankey diagrams from indented text." />
     <link rel="icon" href="data:," />
     <title>Pug Sankey</title>
+    <script>
+      (() => {
+        let preference = "system";
+        try {
+          const saved = localStorage.getItem("pug-sankey-theme-v2");
+          if (["system", "light", "dark"].includes(saved)) preference = saved;
+        } catch { /* Storage may be blocked; still follow the system. */ }
+        document.documentElement.dataset.themePreference = preference;
+        document.documentElement.dataset.theme = preference === "system"
+          ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : preference;
+      })();
+    </script>
     <link rel="stylesheet" href="sankey.css" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -41,10 +53,10 @@
         <details class="toolbar-menu settings-menu" name="application-menu">
           <summary>Settings</summary>
           <div class="toolbar-popover">
-            <button class="theme-toggle" id="theme" type="button" aria-label="Toggle light and dark theme" title="Theme follows your system until toggled"><span class="theme-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg></span><span class="theme-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"></path></svg></span><span>Theme</span><small id="theme-value">System</small></button>
+            <button class="theme-toggle" id="theme" type="button" aria-label="Toggle light and dark theme" title="Toggle light and dark theme"><span class="theme-sun" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"></path></svg></span><span class="theme-moon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 14.1A8.5 8.5 0 0 1 9.9 3.5 8.5 8.5 0 1 0 20.5 14.1Z"></path></svg></span><span>Editor theme</span><small id="theme-value"></small></button>
             <label class="vim-toggle menu-setting"><span>Vim mode</span><input id="vim-mode" type="checkbox" role="switch" /></label>
             <span class="menu-separator"></span>
-            <button id="open-diagram-appearance" type="button">Diagram labels &amp; values…</button>
+            <button id="open-diagram-appearance" type="button">Diagram settings…</button>
           </div>
         </details>
         <span class="toolbar-divider" aria-hidden="true"></span>
@@ -91,9 +103,12 @@
     </main>
     <dialog id="diagram-appearance">
       <form id="diagram-appearance-form" style="padding:16px">
-        <div class="dialog-title"><h2>Diagram labels &amp; values</h2></div>
+        <div class="dialog-title"><h2>Diagram settings</h2></div>
         <p class="dialog-help">Saved with your Pug source and applied to exported diagrams.</p>
         <div class="builder-grid">
+          <label class="builder-wide">Flow theme<select name="theme" aria-describedby="diagram-theme-help"></select><small id="diagram-theme-help" class="dialog-help"></small></label>
+          <label>Background<input name="background" placeholder="Automatic · e.g. #18181f"></label>
+          <label>Color blending (%)<input name="blend" type="number" min="0" max="100" step="1" placeholder="60"></label>
           <label>Names<select name="node-labels"><option value="show">Show</option><option value="hide">Hide</option></select></label>
           <label>Totals<select name="node-values"><option value="show">Show</option><option value="hide">Hide</option></select></label>
           <label>Flow labels<select name="flow-labels"><option value="show">Show</option><option value="hide">Hide</option></select></label>
@@ -150,9 +165,8 @@
     <dialog class="export-dialog" id="copy-export-dialog">
       <form class="export-form" method="dialog" id="copy-export-form">
         <div class="dialog-title"><div><small>EXPORT</small><h2>Copy diagram</h2></div></div>
-        <p class="export-help">Choose what to copy and its format.</p>
+        <p class="export-help">Choose a format to copy the diagram.</p>
         <div class="builder-grid">
-          <label class="builder-wide">Content<select id="copy-export-target"></select></label>
           <label>Format<select id="copy-export-format"><option value="png">PNG image</option><option value="svg">SVG vector</option></select></label>
           <label id="copy-export-dpi-row">PNG resolution<select id="copy-export-dpi"><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option><option value="600">600 DPI</option></select></label>
         </div>
@@ -162,9 +176,8 @@
     <dialog class="export-dialog" id="save-export-dialog">
       <form class="export-form" method="dialog" id="save-export-form">
         <div class="dialog-title"><div><small>EXPORT</small><h2>Save diagram</h2></div></div>
-        <p class="export-help">Choose what to save and its format.</p>
+        <p class="export-help">Choose a format to save the diagram.</p>
         <div class="builder-grid">
-          <label class="builder-wide">Content<select id="save-export-target"></select></label>
           <label>Format<select id="save-export-format"><option value="png">PNG image</option><option value="svg">SVG vector</option></select></label>
           <label id="save-export-dpi-row">PNG resolution<select id="save-export-dpi"><option value="96">96 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI</option><option value="600">600 DPI</option></select></label>
         </div>

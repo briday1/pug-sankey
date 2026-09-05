@@ -1,23 +1,80 @@
-// Quiet stream geometry with horizontal mouths and continuous tangents.
-// The fabric follows these routes without decorative waves.
+// Solid ribbon routes. Every theme preserves horizontal mouths and exact
+// connection coordinates; drawing style never changes quantitative widths.
 const point = ([x,y]) => `${x} ${y}`;
 
-export function sweepChannel(x0, y0, x1, y1, thickness = 0) {
+export function sweepChannel(x0, y0, x1, y1, thickness = 0, theme = "smooth", maximumThickness = thickness) {
   const span = x1-x0, rise = y1-y0;
+  if (theme === "s-bend") {
+    const points = [[x0,y0], [x0+span*.85,y0], [x0+span*.15,y1], [x1,y1]];
+    return { points, path: `M ${point(points[0])} C ${points.slice(1).map(point).join(" ")}` };
+  }
+  if (theme === "zigzag") {
+    const amplitude = Math.min(20,Math.abs(span)*.09);
+    const points = [[x0,y0],[x0+span*.12,y0],
+      [x0+span*.3,y0+rise*.25-amplitude], [x0+span*.5,y0+rise*.5+amplitude],
+      [x0+span*.7,y0+rise*.75-amplitude], [x0+span*.88,y1],[x1,y1]];
+    return { points, path: `M ${points.map(point).join(" L ")}` };
+  }
+  if (theme === "staircase") {
+    const points = [[x0,y0]];
+    for (const fraction of [.25,.5,.75]) {
+      const before = (fraction-.25)/.75, after = fraction/.75;
+      points.push([x0+span*fraction,y0+rise*before],[x0+span*fraction,y0+rise*after]);
+    }
+    points.push([x1,y1]);
+    return { points, path: `M ${points.map(point).join(" L ")}` };
+  }
+  if (theme === "angular") {
+    const points = [[x0,y0], [x0+span*.22,y0], [x0+span*.78,y1], [x1,y1]];
+    return { points, path: `M ${points.map(point).join(" L ")}` };
+  }
+  if (theme === "terraced") {
+    const middle = (y0+y1)/2;
+    const points = [[x0,y0], [x0+span*.16,y0], [x0+span*.38,middle], [x0+span*.62,middle], [x0+span*.84,y1], [x1,y1]];
+    return { points, path: bendFeedback(points, Math.min(24,Math.abs(span)*.07)) };
+  }
+  if (theme === "circuit") {
+    // Opposing flows take different elbows instead of sharing a vertical
+    // run, which would make their crossing look like a merge.
+    const middle = x0 + span * (rise > 0 ? .34 : rise < 0 ? .66 : .5);
+    const points = [[x0,y0], [middle,y0], [middle,y1], [x1,y1]];
+    return { points, path: bendFeedback(points, Math.min(Math.abs(span)*.18,Math.max(18,maximumThickness*.6))) };
+  }
+  // A shared displacement keeps adjacent branches together. Limit curvature
+  // using the widest channel so thick ribbons do not curl into tight folds.
+  const amplitude = theme === "wiggly" ? Math.min(26, Math.abs(span)*.12, span*span/(Math.max(1,maximumThickness)*22))
+    : theme === "ripple" ? Math.min(12, Math.abs(span)*.08, span*span/(Math.max(1,maximumThickness)*65))
+    : ["arc","dip","sail"].includes(theme) ? Math.min(58,Math.abs(span)*.26) : 0;
   function sample(t) {
     const ease = t*t*t*(10+t*(-15+6*t));
     const easeSlope = 30*t*t*(1-t)*(1-t);
-    return { p:[x0+span*t,y0+rise*ease], d:[span,rise*easeSlope] };
+    const s = Math.sin(Math.PI*t), c = Math.cos(Math.PI*t);
+    const frequency = (theme === "ripple" ? 4 : 2)*Math.PI;
+    let wave, waveSlope;
+    if (theme === "sail") {
+      // t²(1-t)^4 peaks at t=1/3; scaling makes its height comparable to Arc.
+      const k = 729/16;
+      wave = -amplitude*k*t*t*(1-t)**4;
+      waveSlope = -amplitude*k*(2*t*(1-t)**4-4*t*t*(1-t)**3);
+    } else if (theme === "arc" || theme === "dip") {
+      const sign = theme === "arc" ? -1 : 1;
+      wave = sign*amplitude*s*s;
+      waveSlope = sign*amplitude*2*Math.PI*s*c;
+    } else {
+      wave = amplitude*s*s*Math.sin(frequency*t);
+      waveSlope = amplitude*(2*Math.PI*s*c*Math.sin(frequency*t)+frequency*s*s*Math.cos(frequency*t));
+    }
+    return { p:[x0+span*t,y0+rise*ease+wave], d:[span,rise*easeSlope+waveSlope] };
   }
   const points = [[x0,y0]];
   let path = `M ${x0} ${y0}`;
-  // Hermite segments preserve the analytic tangent at every join, including
-  // the mouths, so the strands join the shared trunks without a kink.
-  for (let i=0;i<8;i++) {
-    const a=sample(i/8), b=sample((i+1)/8), dt=1/24;
+  // Hermite segments preserve analytic tangents, including at the mouths.
+  const segments = amplitude ? 24 : 8;
+  for (let i=0;i<segments;i++) {
+    const a=sample(i/segments), b=sample((i+1)/segments), dt=1/(segments*3);
     const c0=[a.p[0]+a.d[0]*dt,a.p[1]+a.d[1]*dt];
     const c1=[b.p[0]-b.d[0]*dt,b.p[1]-b.d[1]*dt];
-    const end=i===7 ? [x1,y1] : b.p;
+    const end=i===segments-1 ? [x1,y1] : b.p;
     path += ` C ${point(c0)} ${point(c1)} ${point(end)}`;
     points.push(c0,c1,end);
   }

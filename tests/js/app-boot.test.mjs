@@ -58,6 +58,20 @@ test("the objects panel contains only nodes and flows, while image exports remai
   for (const id of ["open-copy-export", "open-save-export", "copy-export-format", "save-export-format"]) assert.ok(html.includes(`id="${id}"`));
 });
 
+test("copy and save dialogs expose format and resolution without a redundant content selector", () => {
+  for (const action of ["copy", "save"]) {
+    const dialog = html.match(new RegExp(`<dialog\\b[^>]*id="${action}-export-dialog"[^>]*>([\\s\\S]*?)<\\/dialog>`))?.[1];
+    assert.ok(dialog);
+    assert.doesNotMatch(dialog, /Content|export-target/);
+    assert.deepEqual([...dialog.matchAll(/<select\b[^>]*id="([^"]+)"/g)].map(match => match[1]), [
+      `${action}-export-format`, `${action}-export-dpi`,
+    ]);
+    assert.match(dialog, /value="png"/);
+    assert.match(dialog, /value="svg"/);
+    assert.match(dialog, /value="300" selected/);
+  }
+});
+
 test("canvas still edits color/label/value via the inspector", () => {
   assert.ok(/data-node-field="color"/.test(app) || /data-node-field=\\"color/.test(app) || app.includes('data-node-field="color"'), "node color field present");
   assert.ok(app.includes('data-node-field="label"'), "node label field present");

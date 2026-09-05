@@ -1,4 +1,5 @@
 import { compileStyleSheet } from "./style-sheet.mjs";
+import { DIAGRAM_THEMES, DEFAULT_DIAGRAM_THEME, isDiagramTheme } from "./diagram-themes.mjs";
 
 const ID_PATTERN = /^[a-zA-Z][\w-]*$/;
 const ANNOTATION_STYLE_FIELDS = new Set([
@@ -15,7 +16,7 @@ const FLOW_PROPERTIES = new Set(["id", "from", "to", "value", "color", "label", 
 const NODE_STYLE_PROPERTIES = new Set(["color", ...FONT_FIELDS]);
 const FLOW_STYLE_PROPERTIES = new Set(["color", "label", ...FONT_FIELDS]);
 const CANVAS_SETTINGS = new Set([
-  "background", "font", "node-labels", "node-values", "flow-labels", "flow-values", "blend",
+  "background", "font", "node-labels", "node-values", "flow-labels", "flow-values", "blend", "theme",
   "label-color", "node-value-color", "flow-value-color", "label-font-size", "value-font-size",
 ]);
 const VISIBILITY_SETTINGS = new Set(["node-labels", "node-values", "flow-labels", "flow-values"]);
@@ -252,6 +253,9 @@ function canvasSettingsFor(diagram, errors) {
     const value = child.text.trim();
     if (CANVAS_SETTINGS.has(child.type)) {
       if (!value) errors.push(`Line ${child.lineNumber}: .${child.type} needs a value.`);
+      else if (child.type === "theme" && !isDiagramTheme(value)) {
+        errors.push(`Line ${child.lineNumber}: .theme must be one of ${DIAGRAM_THEMES.map(theme => theme.id).join(", ")}.`);
+      }
       else if (["label-font-size", "value-font-size"].includes(child.type) && (!Number.isFinite(Number(value)) || Number(value) <= 0 || Number(value) > 96)) {
         errors.push(`Line ${child.lineNumber}: .${child.type} must be a number greater than 0 and at most 96.`);
       }
@@ -286,6 +290,7 @@ function visibility(value, fallback) {
 function figureStyle(settings) {
   const blendRaw = Number(settings.blend ?? 60);
   return {
+    theme: settings.theme ?? DEFAULT_DIAGRAM_THEME,
     background: settings.background ?? null,
     label: null,
     text: null,

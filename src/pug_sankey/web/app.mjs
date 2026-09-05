@@ -22,6 +22,7 @@ import { attachTextEditor } from "./text-editor.mjs";
 import { applyHighlights } from "./syntax-highlight.mjs";
 import { ADDITIONAL_DEMOS } from "./demo-sources.mjs";
 import { setDiagramSettings } from "./diagram-settings.mjs";
+import { DIAGRAM_THEMES } from "./diagram-themes.mjs";
 
 // ---- demo library ----------------------------------------------------------
 
@@ -595,11 +596,20 @@ $("#copy-export-form").addEventListener("submit", (e) => { e.preventDefault(); d
 const appearance = $("#diagram-appearance");
 const appearanceForm = $("#diagram-appearance-form");
 const appearanceFields = {
+  "theme": "theme", "background": "background", "blend": "blend",
   "node-labels": "nodeLabels", "node-values": "nodeValues",
   "flow-labels": "flowLabels", "flow-values": "flowValues",
   "label-color": "labelColor", "node-value-color": "nodeValueColor", "flow-value-color": "flowValueColor",
   "font": "font", "label-font-size": "labelFontSize", "value-font-size": "valueFontSize",
 };
+const diagramThemeSelect = appearanceForm.elements.namedItem("theme");
+diagramThemeSelect.replaceChildren(...DIAGRAM_THEMES.map(theme => {
+  const option = document.createElement("option"); option.value = theme.id; option.textContent = theme.label; return option;
+}));
+function updateDiagramThemeHelp() {
+  $("#diagram-theme-help").textContent = DIAGRAM_THEMES.find(theme => theme.id === diagramThemeSelect.value)?.description || "";
+}
+diagramThemeSelect.addEventListener("change", updateDiagramThemeHelp);
 $("#open-diagram-appearance").addEventListener("click", () => {
   const figure = currentGraph?.figure ?? parseDiagram(pugSource).figure;
   for (const [name,key] of Object.entries(appearanceFields)) {
@@ -607,6 +617,7 @@ $("#open-diagram-appearance").addEventListener("click", () => {
     appearanceForm.elements.namedItem(name).value = typeof value === "boolean" ? (value ? "show" : "hide") : (value ?? "");
   }
   $("#appearance-error").textContent = "";
+  updateDiagramThemeHelp();
   appearance.showModal();
 });
 $("#appearance-cancel").addEventListener("click", () => appearance.close());
@@ -614,7 +625,7 @@ appearanceForm.addEventListener("submit", event => {
   event.preventDefault();
   const settings = Object.fromEntries(Object.keys(appearanceFields).map(name => [name,appearanceForm.elements.namedItem(name).value.trim()]));
   for (const [name,value] of Object.entries(settings)) {
-    if (name.endsWith("-color") && value && !CSS.supports("color",value)) {
+    if ((name.endsWith("-color") || name === "background") && value && !CSS.supports("color",value)) {
       $("#appearance-error").textContent = "Enter a valid color: a hex code, RGB value, or color name.";
       return;
     }
@@ -627,20 +638,26 @@ appearanceForm.addEventListener("submit", event => {
 
 const themeButton = $("#theme");
 const themeValue = $("#theme-value");
+themeButton.querySelector("span:last-of-type").textContent = "Editor theme";
 const themeStorageKey = "pug-sankey-theme-v2";
-function applyTheme(mode) {
-  document.documentElement.dataset.theme = mode === "system" ? (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : mode;
-  themeValue.textContent = mode[0].toUpperCase() + mode.slice(1);
-  try { localStorage.setItem(themeStorageKey, mode); } catch { /* ignore */ }
+const systemTheme = matchMedia("(prefers-color-scheme: dark)");
+let editorThemeMode = document.documentElement.dataset.themePreference || "system";
+function applyTheme(mode, persist = false) {
+  editorThemeMode = mode;
+  document.documentElement.dataset.themePreference = mode;
+  document.documentElement.dataset.theme = mode === "system" ? (systemTheme.matches ? "dark" : "light") : mode;
+  const resolved = document.documentElement.dataset.theme;
+  themeValue.textContent = resolved === "dark" ? "Dark" : "Light";
+  themeButton.title = `Switch to ${resolved === "dark" ? "light" : "dark"} mode`;
+  themeButton.setAttribute("aria-label", themeButton.title);
+  if (persist) try { localStorage.setItem(themeStorageKey, mode); } catch { /* ignore */ }
 }
 themeButton.addEventListener("click", () => {
-  const order = ["dark", "light", "system"];
-  const current = (localStorage.getItem(themeStorageKey) ?? "dark");
-  applyTheme(order[(order.indexOf(current) + 1) % order.length]);
+  applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true);
 });
-applyTheme((() => { try { return localStorage.getItem(themeStorageKey) ?? "dark"; } catch { return "dark"; } })());
-matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-  if (localStorage.getItem(themeStorageKey) === "system") applyTheme("system");
+applyTheme(editorThemeMode);
+systemTheme.addEventListener("change", () => {
+  if (editorThemeMode === "system") applyTheme("system");
 });
 
 attachVimMode(source, $("#vim-mode"), $("#vim-status"));

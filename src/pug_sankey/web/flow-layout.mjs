@@ -1,13 +1,15 @@
 // Geometry for a continuous flow map. Logical nodes are invisible stretches
 // of shared trunk; branches attach flush with a single linear quantity scale.
 import { sweepChannel, bendFeedback } from "./flow-geometry.mjs";
+import { DEFAULT_DIAGRAM_THEME, isDiagramTheme } from "./diagram-themes.mjs";
 export const FLOW_LAYOUT = Object.freeze({
   nodeWidth: 116, columnGutter: 204, nodeGutter: 84, padding: 62,
-  targetHeight: 108, portGap: 0, headerHeight: 0,
+  targetHeight: 108, portGap: 0, headerHeight: 0, theme: DEFAULT_DIAGRAM_THEME,
 });
 
 export function layoutFlowField(sourceNodes, sourceEdges, overrides = {}) {
   const options = { ...FLOW_LAYOUT, ...overrides };
+  if (!isDiagramTheme(options.theme)) throw new Error(`Unknown diagram theme: ${options.theme}`);
   const nodes = sourceNodes.filter(n => !n.hidden).map(n => ({ ...n, incoming: 0, outgoing: 0 }));
   const byId = new Map(nodes.map(n => [n.id, n]));
   const edges = sourceEdges.filter(e => !e.hidden && byId.has(e.from) && byId.has(e.to)).map(e => ({ ...e }));
@@ -109,10 +111,10 @@ export function layoutFlowField(sourceNodes, sourceEdges, overrides = {}) {
       lane += e.thickness + 22;
       const clearance = e.thickness / 2 + 22;
       e.points = [[x0,y0],[x0+clearance,y0],[x0+clearance,y],[x1-clearance,y],[x1-clearance,y1],[x1,y1]];
-      e.path = bendFeedback(e.points, Math.max(24,e.thickness/2+12));
+      e.path = options.theme === "angular" ? `M ${e.points.map(p => p.join(" ")).join(" L ")}` : bendFeedback(e.points, Math.max(24,e.thickness/2+12));
       e.labelX = (x0+x1)/2; e.labelY = y;
     } else {
-      const sweep = sweepChannel(x0,y0,x1,y1,e.thickness);
+      const sweep = sweepChannel(x0,y0,x1,y1,e.thickness,options.theme,maxVolume*valueScale);
       e.points = sweep.points;
       e.path = sweep.path;
       e.labelX = (x0+x1)/2; e.labelY = (y0+y1)/2;
@@ -120,6 +122,8 @@ export function layoutFlowField(sourceNodes, sourceEdges, overrides = {}) {
   });
   const maxX = Math.max(options.padding, ...nodes.map(n => n.x+n.width), ...edges.flatMap(e => e.points.map(p => p[0]+e.thickness/2)));
   const minX = Math.min(0, ...edges.flatMap(e => e.points.map(p => p[0]-e.thickness/2-options.padding)));
-  return { nodes, edges, width: maxX + options.padding - minX, height: Math.max(top+contentHeight,...nodes.map(n => n.y+n.height)) + options.padding,
-    viewX: minX, options, valueScale, groups: [] };
+  const minY = Math.min(0, ...edges.flatMap(e => e.points.map(p => p[1]-e.thickness/2-options.padding)));
+  const maxY = Math.max(top+contentHeight,...nodes.map(n => n.y+n.height),...edges.flatMap(e => e.points.map(p => p[1]+e.thickness/2)));
+  return { nodes, edges, width: maxX + options.padding - minX, height: maxY + options.padding - minY,
+    viewX: minX, viewY: minY, options, valueScale, groups: [] };
 }

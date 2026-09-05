@@ -69,6 +69,14 @@ flow
   .to electricity
   .value 30</code></pre>
 
+<h2 id="diagram-settings">Diagram settings and themes</h2>
+<p>Open <strong>Settings → Diagram settings</strong> for flow shape, background, color blending, and label/value controls. These are saved in Pug and used by the editor, CLI, SVG, and PNG exports. The editor's light/dark appearance is a separate setting.</p>
+<pre><code>.theme wiggly
+.background #18181f
+.blend 60</code></pre>
+<p><code>.theme smooth</code> keeps the original continuous curves and is the default for existing files. <code>wiggly</code> adds broad waves, <code>angular</code> uses crisp diagonal turns, and <code>terraced</code> uses rounded transitions with level stretches. All retain solid ribbons, pointed endings, and the same quantity scale. Feedback loops retain their dedicated lanes, with angular turns in the Angular theme. Under an explicit <code>#canvas</code>, indent these fields by two spaces.</p>
+<p>Three further styles are <code>arc</code> for raised arches, <code>ripple</code> for repeated shallow waves, and <code>circuit</code> for orthogonal runs with rounded elbows. These are flow-shape styles, not color palettes. The editor's Light/Dark toggle starts with your system preference and remembers your choice once toggled; there is no separate System option.</p>
+<p>Also available: <code>zigzag</code> for alternating faceted bends, <code>staircase</code> for three crisp steps, <code>sail</code> for an early asymmetric crest, <code>dip</code> for rounded bowls, and <code>s-bend</code> for long entrances and a concentrated central turn. All twelve themes are selectable in Diagram settings.</p>
 <h2 id="labels">Labels and values</h2><p>Four canvas settings toggle text independently. Each accepts <code>show</code> or <code>hide</code>:</p>
 <pre><code>.node-labels show
 .node-values show
@@ -77,7 +85,7 @@ flow
 <ul><li><code>.node-labels</code> — the text label on each node bar.</li><li><code>.node-values</code> — the total throughput value shown with each node.</li><li><code>.flow-labels</code> — the text labels placed on ribbons via <code>.label</code> (hidden by default).</li><li><code>.flow-values</code> — the numeric value shown on each ribbon.</li></ul>
 <p>Node annotations (see Nodes) are separate from these settings and are always shown unless individually hidden.</p>
 
-<h2 id="styles">Reusable styles</h2><p>Use <strong>Settings → Diagram labels &amp; values</strong> to show or hide totals and flow values, set colors, and adjust typography. The settings are saved in Pug: <code>.node-values hide</code>, <code>.flow-values hide</code>, <code>.label-color #dce4e7</code>, <code>.node-value-color #8f9fa8</code>, <code>.flow-value-color #f2c879</code>, <code>.label-font-size 11</code>, and <code>.value-font-size 9</code>. Clear a color field to return to automatic coloring. These settings also apply to SVG and PNG exports.</p><p>Reusable definitions are written directly at the source root, so the complete diagram stays in one Pug file:</p>
+<h2 id="styles">Reusable styles</h2><p>Use <strong>Settings → Diagram settings</strong> to show or hide totals and flow values, set colors, and adjust typography. The settings are saved in Pug: <code>.node-values hide</code>, <code>.flow-values hide</code>, <code>.label-color #dce4e7</code>, <code>.node-value-color #8f9fa8</code>, <code>.flow-value-color #f2c879</code>, <code>.label-font-size 11</code>, and <code>.value-font-size 9</code>. Clear a color field to return to automatic coloring. These settings also apply to SVG and PNG exports.</p><p>Reusable definitions are written directly at the source root, so the complete diagram stays in one Pug file:</p>
 <pre><code>@node source {
   color: #57534e;
 }
