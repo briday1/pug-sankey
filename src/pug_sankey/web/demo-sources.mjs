@@ -117,149 +117,228 @@ flow
     css: ""
   },
   {
-    name: "Website traffic funnel",
-    pug: `// Demo 2 — website traffic funnel: visits through channels and pages to conversions (thousands)
-.background #fafaf9
+   name: "Radar link budget",
+   pug: `// Demo 2 — radar link budget from transmitter to detection margin, with gains added in green and losses drained in red (dB budget units)
+.background #f8fafc
 .font Verdana
 .node-labels show
 .node-values show
 .flow-labels show
 .flow-values show
-.blend 55
+.blend 40
 
 node
-  .id visits
-  .label Visits
-  .color #2563eb
+ .id tx-power
+ .label Tx power
+ .color #2563eb
 node
-  .id organic
-  .label Organic
-  .color #22c55e
+ .id tx-gain
+ .label Tx antenna gain
+ .color #16a34a
 node
-  .id paid
-  .label Paid
-  .color #f59e0b
+ .id launch-budget
+ .label Launch budget
+ .color #0ea5e9
+ .annotation
+   .below
+     | Green nodes add gain.
+     | Red nodes absorb loss.
 node
-  .id social
-  .label Social
-  .color #ec4899
+ .id feeder-loss
+ .label Feeder loss
+ .color #dc2626
 node
-  .id email
-  .label Email
-  .color #8b5cf6
+ .id free-space-out
+ .label Outbound path loss
+ .color #ef4444
 node
-  .id landing
-  .label Landing
-  .color #0ea5e9
+ .id atmosphere-out
+ .label Outbound weather loss
+ .color #f97316
 node
-  .id docs
-  .label Docs
-  .color #14b8a6
+ .id pointing-loss
+ .label Pointing loss
+ .color #fb7185
 node
-  .id pricing
-  .label Pricing
-  .color #f97316
+ .id target-illumination
+ .label Power on target
+ .color #6366f1
 node
-  .id signup
-  .label Signup
-  .color #16a34a
+ .id target-gain
+ .label Target RCS gain
+ .color #22c55e
 node
-  .id bounce
-  .label Bounce
-  .color #94a3b8
+ .id echo-budget
+ .label Echo budget
+ .color #8b5cf6
+node
+ .id free-space-return
+ .label Return path loss
+ .color #ef4444
+node
+ .id atmosphere-return
+ .label Return weather loss
+ .color #f97316
+node
+ .id polarization-loss
+ .label Polarization loss
+ .color #fb7185
+node
+ .id receiver-terminal
+ .label Signal at antenna
+ .color #3b82f6
+node
+ .id rx-gain
+ .label Rx antenna gain
+ .color #16a34a
+node
+ .id if-budget
+ .label Front-end budget
+ .color #06b6d4
+node
+ .id radome-loss
+ .label Radome & cable loss
+ .color #dc2626
+node
+ .id implementation-loss
+ .label Receiver loss
+ .color #f97316
+node
+ .id matched-input
+ .label Signal to processor
+ .color #2563eb
+node
+ .id processing-gain
+ .label Processing gain
+ .color #22c55e
+node
+ .id detection-budget
+ .label Detection budget
+ .color #7c3aed
+node
+ .id threshold
+ .label CFAR threshold
+ .color #94a3b8
+node
+ .id margin
+ .label Detection margin
+ .color #16a34a
+ .annotation
+   .above
+     | Positive end-to-end margin.
 
 flow
-  .from visits
-  .to organic
-  .value 46
-  .label search
+ .from tx-power
+ .to launch-budget
+ .value 90
+ .label transmitter
 flow
-  .from visits
-  .to paid
-  .value 22
-  .label ads
+ .from tx-gain
+ .to launch-budget
+ .value 26
+ .label + antenna
 flow
-  .from visits
-  .to social
-  .value 18
-  .label shares
+ .from launch-budget
+ .to feeder-loss
+ .value 2
+ .label - feeder
 flow
-  .from visits
-  .to email
-  .value 14
-  .label campaigns
+ .from launch-budget
+ .to free-space-out
+ .value 84
+ .label - free-space
 flow
-  .from organic
-  .to landing
-  .value 26
+ .from launch-budget
+ .to atmosphere-out
+ .value 6
+ .label - weather
 flow
-  .from organic
-  .to docs
-  .value 12
+ .from launch-budget
+ .to pointing-loss
+ .value 2
+ .label - pointing
 flow
-  .from organic
-  .to pricing
-  .value 8
+ .from launch-budget
+ .to target-illumination
+ .value 22
+ .label on target
 flow
-  .from paid
-  .to landing
-  .value 14
+ .from target-illumination
+ .to echo-budget
+ .value 22
+ .label reflected signal
 flow
-  .from paid
-  .to pricing
-  .value 8
+ .from target-gain
+ .to echo-budget
+ .value 14
+ .label + target RCS
 flow
-  .from social
-  .to landing
-  .value 10
+ .from echo-budget
+ .to free-space-return
+ .value 20
+ .label - free-space
 flow
-  .from social
-  .to docs
-  .value 5
+ .from echo-budget
+ .to atmosphere-return
+ .value 4
+ .label - weather
 flow
-  .from social
-  .to pricing
-  .value 3
+ .from echo-budget
+ .to polarization-loss
+ .value 2
+ .label - polarization
 flow
-  .from email
-  .to landing
-  .value 6
+ .from echo-budget
+ .to receiver-terminal
+ .value 10
+ .label at antenna
 flow
-  .from email
-  .to docs
-  .value 3
+ .from receiver-terminal
+ .to if-budget
+ .value 10
+ .label captured echo
 flow
-  .from email
-  .to pricing
-  .value 5
+ .from rx-gain
+ .to if-budget
+ .value 24
+ .label + receive gain
 flow
-  .from landing
-  .to signup
-  .value 20
-  .label convert
+ .from if-budget
+ .to radome-loss
+ .value 4
+ .label - radome/cable
 flow
-  .from landing
-  .to bounce
-  .value 36
-  .label leave
+ .from if-budget
+ .to implementation-loss
+ .value 12
+ .label - receiver
 flow
-  .from docs
-  .to signup
-  .value 6
+ .from if-budget
+ .to matched-input
+ .value 18
+ .label to processor
 flow
-  .from docs
-  .to bounce
-  .value 14
+ .from matched-input
+ .to detection-budget
+ .value 18
+ .label pre-detect signal
 flow
-  .from pricing
-  .to signup
-  .value 18
+ .from processing-gain
+ .to detection-budget
+ .value 18
+ .label + integration
 flow
-  .from pricing
-  .to bounce
-  .value 6`,
-    css: ""
-  },
+ .from detection-budget
+ .to threshold
+ .value 28
+ .label threshold
+flow
+ .from detection-budget
+ .to margin
+ .value 8
+ .label margin`,
+   css: ""
+ },
   {
     name: "Household budget",
     pug: `// Demo 3 — household budget: income streams through accounts to spending (hundreds of dollars)
