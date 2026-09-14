@@ -117,8 +117,8 @@ flow
     css: ""
   },
   {
-   name: "Radar link budget",
-   pug: `// Demo 2 — radar link budget from transmitter to detection margin, with gains added in green and losses drained in red (dB budget units)
+    name: "Radar link budget",
+    pug: `// Demo 2 — radar link budget from transmitter to detection margin, with gains added in green and losses drained in red (dB budget units)
 .background #f8fafc
 .font Verdana
 .node-labels show
@@ -128,217 +128,217 @@ flow
 .blend 40
 
 node
- .id tx-power
- .label Tx power
- .color #2563eb
+  .id tx-power
+  .label Tx power
+  .color #2563eb
 node
- .id tx-gain
- .label Tx antenna gain
- .color #16a34a
+  .id tx-gain
+  .label Tx antenna gain
+  .color #16a34a
 node
- .id launch-budget
- .label Launch budget
- .color #0ea5e9
- .annotation
-   .below
-     | Green nodes add gain.
-     | Red nodes absorb loss.
+  .id launch-budget
+  .label Launch budget
+  .color #0ea5e9
+  .annotation
+    .below
+      | Green nodes add gain.
+      | Red nodes absorb loss.
 node
- .id feeder-loss
- .label Feeder loss
- .color #dc2626
+  .id feeder-loss
+  .label Feeder loss
+  .color #dc2626
 node
- .id free-space-out
- .label Outbound path loss
- .color #ef4444
+  .id free-space-out
+  .label Outbound path loss
+  .color #ef4444
 node
- .id atmosphere-out
- .label Outbound weather loss
- .color #f97316
+  .id atmosphere-out
+  .label Outbound weather loss
+  .color #f97316
 node
- .id pointing-loss
- .label Pointing loss
- .color #fb7185
+  .id pointing-loss
+  .label Pointing loss
+  .color #fb7185
 node
- .id target-illumination
- .label Power on target
- .color #6366f1
+  .id target-illumination
+  .label Power on target
+  .color #6366f1
 node
- .id target-gain
- .label Target RCS gain
- .color #22c55e
+  .id target-gain
+  .label Target RCS gain
+  .color #22c55e
 node
- .id echo-budget
- .label Echo budget
- .color #8b5cf6
+  .id echo-budget
+  .label Echo budget
+  .color #8b5cf6
 node
- .id free-space-return
- .label Return path loss
- .color #ef4444
+  .id free-space-return
+  .label Return path loss
+  .color #ef4444
 node
- .id atmosphere-return
- .label Return weather loss
- .color #f97316
+  .id atmosphere-return
+  .label Return weather loss
+  .color #f97316
 node
- .id polarization-loss
- .label Polarization loss
- .color #fb7185
+  .id polarization-loss
+  .label Polarization loss
+  .color #fb7185
 node
- .id receiver-terminal
- .label Signal at antenna
- .color #3b82f6
+  .id receiver-terminal
+  .label Signal at antenna
+  .color #3b82f6
 node
- .id rx-gain
- .label Rx antenna gain
- .color #16a34a
+  .id rx-gain
+  .label Rx antenna gain
+  .color #16a34a
 node
- .id if-budget
- .label Front-end budget
- .color #06b6d4
+  .id if-budget
+  .label Front-end budget
+  .color #06b6d4
 node
- .id radome-loss
- .label Radome & cable loss
- .color #dc2626
+  .id radome-loss
+  .label Radome & cable loss
+  .color #dc2626
 node
- .id implementation-loss
- .label Receiver loss
- .color #f97316
+  .id implementation-loss
+  .label Receiver loss
+  .color #f97316
 node
- .id matched-input
- .label Signal to processor
- .color #2563eb
+  .id matched-input
+  .label Signal to processor
+  .color #2563eb
 node
- .id processing-gain
- .label Processing gain
- .color #22c55e
+  .id processing-gain
+  .label Processing gain
+  .color #22c55e
 node
- .id detection-budget
- .label Detection budget
- .color #7c3aed
+  .id detection-budget
+  .label Detection budget
+  .color #7c3aed
 node
- .id threshold
- .label CFAR threshold
- .color #94a3b8
+  .id threshold
+  .label CFAR threshold
+  .color #94a3b8
 node
- .id margin
- .label Detection margin
- .color #16a34a
- .annotation
-   .above
-     | Positive end-to-end margin.
+  .id margin
+  .label Detection margin
+  .color #16a34a
+  .annotation
+    .above
+      | Positive end-to-end margin.
 
 flow
- .from tx-power
- .to launch-budget
- .value 90
- .label transmitter
+  .from tx-power
+  .to launch-budget
+  .value 90
+  .label transmitter
 flow
- .from tx-gain
- .to launch-budget
- .value 26
- .label + antenna
+  .from tx-gain
+  .to launch-budget
+  .value 26
+  .label + antenna
 flow
- .from launch-budget
- .to feeder-loss
- .value 2
- .label - feeder
+  .from launch-budget
+  .to feeder-loss
+  .value 2
+  .label - feeder
 flow
- .from launch-budget
- .to free-space-out
- .value 84
- .label - free-space
+  .from launch-budget
+  .to free-space-out
+  .value 84
+  .label - free-space
 flow
- .from launch-budget
- .to atmosphere-out
- .value 6
- .label - weather
+  .from launch-budget
+  .to atmosphere-out
+  .value 6
+  .label - weather
 flow
- .from launch-budget
- .to pointing-loss
- .value 2
- .label - pointing
+  .from launch-budget
+  .to pointing-loss
+  .value 2
+  .label - pointing
 flow
- .from launch-budget
- .to target-illumination
- .value 22
- .label on target
+  .from launch-budget
+  .to target-illumination
+  .value 22
+  .label on target
 flow
- .from target-illumination
- .to echo-budget
- .value 22
- .label reflected signal
+  .from target-illumination
+  .to echo-budget
+  .value 22
+  .label reflected signal
 flow
- .from target-gain
- .to echo-budget
- .value 14
- .label + target RCS
+  .from target-gain
+  .to echo-budget
+  .value 14
+  .label + target RCS
 flow
- .from echo-budget
- .to free-space-return
- .value 20
- .label - free-space
+  .from echo-budget
+  .to free-space-return
+  .value 20
+  .label - free-space
 flow
- .from echo-budget
- .to atmosphere-return
- .value 4
- .label - weather
+  .from echo-budget
+  .to atmosphere-return
+  .value 4
+  .label - weather
 flow
- .from echo-budget
- .to polarization-loss
- .value 2
- .label - polarization
+  .from echo-budget
+  .to polarization-loss
+  .value 2
+  .label - polarization
 flow
- .from echo-budget
- .to receiver-terminal
- .value 10
- .label at antenna
+  .from echo-budget
+  .to receiver-terminal
+  .value 10
+  .label at antenna
 flow
- .from receiver-terminal
- .to if-budget
- .value 10
- .label captured echo
+  .from receiver-terminal
+  .to if-budget
+  .value 10
+  .label captured echo
 flow
- .from rx-gain
- .to if-budget
- .value 24
- .label + receive gain
+  .from rx-gain
+  .to if-budget
+  .value 24
+  .label + receive gain
 flow
- .from if-budget
- .to radome-loss
- .value 4
- .label - radome/cable
+  .from if-budget
+  .to radome-loss
+  .value 4
+  .label - radome/cable
 flow
- .from if-budget
- .to implementation-loss
- .value 12
- .label - receiver
+  .from if-budget
+  .to implementation-loss
+  .value 12
+  .label - receiver
 flow
- .from if-budget
- .to matched-input
- .value 18
- .label to processor
+  .from if-budget
+  .to matched-input
+  .value 18
+  .label to processor
 flow
- .from matched-input
- .to detection-budget
- .value 18
- .label pre-detect signal
+  .from matched-input
+  .to detection-budget
+  .value 18
+  .label pre-detect signal
 flow
- .from processing-gain
- .to detection-budget
- .value 18
- .label + integration
+  .from processing-gain
+  .to detection-budget
+  .value 18
+  .label + integration
 flow
- .from detection-budget
- .to threshold
- .value 28
- .label threshold
+  .from detection-budget
+  .to threshold
+  .value 28
+  .label threshold
 flow
- .from detection-budget
- .to margin
- .value 8
- .label margin`,
-   css: ""
- },
+  .from detection-budget
+  .to margin
+  .value 8
+  .label margin`,
+    css: ""
+  },
   {
     name: "Household budget",
     pug: `// Demo 3 — household budget: income streams through accounts to spending (hundreds of dollars)
