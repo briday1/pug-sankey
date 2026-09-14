@@ -128,12 +128,16 @@ flow
 .blend 40
 
 node
+  .id transmitter
+  .label Tx power + antenna gain
+  .color #16a34a
+node
   .id launch-budget
-  .label Launch budget (+Tx gain)
+  .label Launched signal
   .color #0ea5e9
   .annotation
     .below
-      | Blue stage nodes include the gain at that step.
+      | Green source includes the launch gain.
       | Red nodes absorb the budget losses.
 node
   .id feeder-loss
@@ -153,8 +157,11 @@ node
   .color #fb7185
 node
   .id echo-budget
-  .label Echo budget (+target RCS)
+  .label Echo budget
   .color #8b5cf6
+  .annotation
+    .below
+      | Net after outbound losses and target reflection.
 node
   .id free-space-return
   .label Return path loss
@@ -169,8 +176,11 @@ node
   .color #fb7185
 node
   .id receiver-signal
-  .label Receiver signal (+Rx gain)
+  .label Receiver signal
   .color #3b82f6
+  .annotation
+    .below
+      | Net after return losses and receive gain.
 node
   .id radome-loss
   .label Radome & cable loss
@@ -181,8 +191,11 @@ node
   .color #f97316
 node
   .id detection-budget
-  .label Detection budget (+processing)
+  .label Detection budget
   .color #7c3aed
+  .annotation
+    .above
+      | Net after front-end losses and processing.
 node
   .id threshold
   .label CFAR threshold
@@ -195,6 +208,11 @@ node
     .above
       | Positive end-to-end margin.
 
+flow
+  .from transmitter
+  .to launch-budget
+  .value 116
+  .label launch
 flow
   .from launch-budget
   .to feeder-loss
