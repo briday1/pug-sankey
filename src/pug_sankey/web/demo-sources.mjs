@@ -118,7 +118,7 @@ flow
   },
   {
     name: "Radar link budget",
-    pug: `// Demo 2 — radar link budget from transmitter to detection margin, with gains added in green and losses drained in red (dB budget units)
+    pug: `// Demo 2 — radar link budget from launch to detection margin; blue stages show post-gain totals and red branches show losses (dB budget units)
 .background #f8fafc
 .font Verdana
 .node-labels show
@@ -128,21 +128,13 @@ flow
 .blend 40
 
 node
-  .id tx-power
-  .label Tx power
-  .color #2563eb
-node
-  .id tx-gain
-  .label Tx antenna gain
-  .color #16a34a
-node
   .id launch-budget
-  .label Launch budget
+  .label Launch budget (+Tx gain)
   .color #0ea5e9
   .annotation
     .below
-      | Green nodes add gain.
-      | Red nodes absorb loss.
+      | Blue stage nodes include the gain at that step.
+      | Red nodes absorb the budget losses.
 node
   .id feeder-loss
   .label Feeder loss
@@ -160,16 +152,8 @@ node
   .label Pointing loss
   .color #fb7185
 node
-  .id target-illumination
-  .label Power on target
-  .color #6366f1
-node
-  .id target-gain
-  .label Target RCS gain
-  .color #22c55e
-node
   .id echo-budget
-  .label Echo budget
+  .label Echo budget (+target RCS)
   .color #8b5cf6
 node
   .id free-space-return
@@ -184,17 +168,9 @@ node
   .label Polarization loss
   .color #fb7185
 node
-  .id receiver-terminal
-  .label Signal at antenna
+  .id receiver-signal
+  .label Receiver signal (+Rx gain)
   .color #3b82f6
-node
-  .id rx-gain
-  .label Rx antenna gain
-  .color #16a34a
-node
-  .id if-budget
-  .label Front-end budget
-  .color #06b6d4
 node
   .id radome-loss
   .label Radome & cable loss
@@ -204,16 +180,8 @@ node
   .label Receiver loss
   .color #f97316
 node
-  .id matched-input
-  .label Signal to processor
-  .color #2563eb
-node
-  .id processing-gain
-  .label Processing gain
-  .color #22c55e
-node
   .id detection-budget
-  .label Detection budget
+  .label Detection budget (+processing)
   .color #7c3aed
 node
   .id threshold
@@ -228,16 +196,6 @@ node
       | Positive end-to-end margin.
 
 flow
-  .from tx-power
-  .to launch-budget
-  .value 90
-  .label transmitter
-flow
-  .from tx-gain
-  .to launch-budget
-  .value 26
-  .label + antenna
-flow
   .from launch-budget
   .to feeder-loss
   .value 2
@@ -245,7 +203,7 @@ flow
 flow
   .from launch-budget
   .to free-space-out
-  .value 84
+  .value 76
   .label - free-space
 flow
   .from launch-budget
@@ -259,83 +217,53 @@ flow
   .label - pointing
 flow
   .from launch-budget
-  .to target-illumination
-  .value 22
-  .label on target
-flow
-  .from target-illumination
   .to echo-budget
-  .value 22
-  .label reflected signal
-flow
-  .from target-gain
-  .to echo-budget
-  .value 14
-  .label + target RCS
+  .value 30
+  .label echoed return
 flow
   .from echo-budget
   .to free-space-return
-  .value 20
+  .value 18
   .label - free-space
 flow
   .from echo-budget
   .to atmosphere-return
-  .value 4
+  .value 3
   .label - weather
 flow
   .from echo-budget
   .to polarization-loss
-  .value 2
+  .value 1
   .label - polarization
 flow
   .from echo-budget
-  .to receiver-terminal
-  .value 10
-  .label at antenna
-flow
-  .from receiver-terminal
-  .to if-budget
-  .value 10
+  .to receiver-signal
+  .value 8
   .label captured echo
 flow
-  .from rx-gain
-  .to if-budget
-  .value 24
-  .label + receive gain
-flow
-  .from if-budget
+  .from receiver-signal
   .to radome-loss
-  .value 4
+  .value 2
   .label - radome/cable
 flow
-  .from if-budget
+  .from receiver-signal
   .to implementation-loss
-  .value 12
+  .value 1
   .label - receiver
 flow
-  .from if-budget
-  .to matched-input
-  .value 18
-  .label to processor
-flow
-  .from matched-input
+  .from receiver-signal
   .to detection-budget
-  .value 18
-  .label pre-detect signal
-flow
-  .from processing-gain
-  .to detection-budget
-  .value 18
-  .label + integration
+  .value 5
+  .label to detector
 flow
   .from detection-budget
   .to threshold
-  .value 28
+  .value 3
   .label threshold
 flow
   .from detection-budget
   .to margin
-  .value 8
+  .value 2
   .label margin`,
     css: ""
   },
